@@ -5409,6 +5409,10 @@ done
 
 
 
+    PKG_CFLAGS="$PKG_CFLAGS -DSQLITE_MAX_PATH_LENGTH=4096"
+
+
+
     vars=""
     for i in $vars; do
 	# check for existence - allows for generic/win/unix VPATH
