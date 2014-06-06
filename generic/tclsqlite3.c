@@ -1,7 +1,7 @@
 #ifdef USE_SYSTEM_SQLITE
 # include <sqlite3.h>
 #else
-#include "../../sqlite3.c"
+#include "sqlite3.c"
 #endif
 /*
 ** 2001 September 15
@@ -2386,7 +2386,7 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
 
     if( rc==TCL_OK ){
       rc = createIncrblobChannel(
-          interp, pDb, zDb, zTable, zColumn, iRow, isReadonly
+          interp, pDb, zDb, zTable, zColumn, (sqlite_int64)iRow, isReadonly
       );
     }
 #endif
