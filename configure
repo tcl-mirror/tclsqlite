@@ -5413,6 +5413,10 @@ done
 
 
 
+    PKG_CFLAGS="$PKG_CFLAGS -DSQLITE_WIN32_NO_ANSI=1"
+
+
+
     vars=""
     for i in $vars; do
 	# check for existence - allows for generic/win/unix VPATH
