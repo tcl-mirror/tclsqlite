@@ -8561,9 +8561,16 @@ $as_echo "#define USE_TCL_STUBS 1" >>confdefs.h
 # Redefine fdatasync as fsync on systems that lack fdatasync
 #--------------------------------------------------------------------
 #
-#AC_CHECK_FUNC(fdatasync, , AC_DEFINE(fdatasync, fsync))
+ac_fn_c_check_func "$LINENO" "fdatasync" "ac_cv_func_fdatasync"
+if test "x$ac_cv_func_fdatasync" = xyes; then :
+
+else
+  $as_echo "#define fdatasync fsync" >>confdefs.h
+
+fi
+
 # Check for library functions that SQLite can optionally use.
-for ac_func in fdatasync usleep fullfsync localtime_r gmtime_r
+for ac_func in usleep utime localtime_r gmtime_r
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
