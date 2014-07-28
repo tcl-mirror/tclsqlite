@@ -5417,6 +5417,10 @@ done
 
 
 
+    PKG_CFLAGS="$PKG_CFLAGS -DSQLITE_ENABLE_FTS4_UNICODE61=1"
+
+
+
     vars=""
     for i in $vars; do
 	# check for existence - allows for generic/win/unix VPATH
