@@ -5421,6 +5421,10 @@ done
 
 
 
+    PKG_CFLAGS="$PKG_CFLAGS -DSQLITE_WIN32_GETVERSIONEX=0"
+
+
+
     vars=""
     for i in $vars; do
 	# check for existence - allows for generic/win/unix VPATH

@@ -82,6 +82,7 @@ TEA_ADD_CFLAGS([-DSQLITE_OMIT_DEPRECATED=1])
 TEA_ADD_CFLAGS([-DSQLITE_MAX_PATH_LENGTH=4096])
 TEA_ADD_CFLAGS([-DSQLITE_WIN32_NO_ANSI=1])
 TEA_ADD_CFLAGS([-DSQLITE_ENABLE_FTS4_UNICODE61=1])
+TEA_ADD_CFLAGS([-DSQLITE_WIN32_GETVERSIONEX=0])
 TEA_ADD_STUB_SOURCES([])
 TEA_ADD_TCL_SOURCES([])
 
@@ -169,7 +170,7 @@ AC_DEFINE(USE_TCL_STUBS, 1, [Use Tcl stubs])
 #--------------------------------------------------------------------
 # Redefine fdatasync as fsync on systems that lack fdatasync
 #--------------------------------------------------------------------
-#
+
 AC_CHECK_FUNC(fdatasync, , AC_DEFINE(fdatasync, fsync))
 # Check for library functions that SQLite can optionally use.
 AC_CHECK_FUNCS([usleep utime localtime_r gmtime_r])
