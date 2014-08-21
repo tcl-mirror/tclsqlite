@@ -8564,7 +8564,7 @@ $as_echo "#define USE_TCL_STUBS 1" >>confdefs.h
 #--------------------------------------------------------------------
 # Redefine fdatasync as fsync on systems that lack fdatasync
 #--------------------------------------------------------------------
-#
+
 ac_fn_c_check_func "$LINENO" "fdatasync" "ac_cv_func_fdatasync"
 if test "x$ac_cv_func_fdatasync" = xyes; then :
 
