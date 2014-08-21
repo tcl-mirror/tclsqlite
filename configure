@@ -7290,6 +7290,7 @@ fi
 	    SHLIB_CFLAGS="-fPIC"
 	    SHLIB_LD="${CC} -shared"
 	    TCL_SHLIB_LD_EXTRAS="-Wl,-soname=\$@"
+	    TK_SHLIB_LD_EXTRAS="-Wl,-soname,\$@"
 	    SHLIB_SUFFIX=".so"
 	    LDFLAGS=""
 	    if test $doRpath = yes; then :
@@ -7304,11 +7305,15 @@ fi
 		CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 		LDFLAGS="$LDFLAGS $PTHREAD_LIBS"
 fi
-	    # Version numbers are dot-stripped by system policy.
-	    TCL_TRIM_DOTS=`echo ${PACKAGE_VERSION} | tr -d .`
-	    UNSHARED_LIB_SUFFIX='${TCL_TRIM_DOTS}.a'
-	    SHARED_LIB_SUFFIX='${TCL_TRIM_DOTS}\$\{DBGX\}.so.1'
-	    TCL_LIB_VERSIONS_OK=nodots
+	    case $system in
+	    FreeBSD-3.*)
+		# Version numbers are dot-stripped by system policy.
+		TCL_TRIM_DOTS=`echo ${VERSION} | tr -d .`
+		UNSHARED_LIB_SUFFIX='${TCL_TRIM_DOTS}.a'
+		SHARED_LIB_SUFFIX='${TCL_TRIM_DOTS}.so'
+		TCL_LIB_VERSIONS_OK=nodots
+		;;
+	    esac
 	    ;;
 	Darwin-*)
 	    CFLAGS_OPTIMIZE="-Os"
@@ -7670,8 +7675,8 @@ fi
 
 else
 
-	       SHLIB_CFLAGS="-Kpic -belf"
-	       LDFLAGS="$LDFLAGS -belf -Wl,-Bexport"
+		SHLIB_CFLAGS="-Kpic -belf"
+		LDFLAGS="$LDFLAGS -belf -Wl,-Bexport"
 
 fi
 	    SHLIB_LD="ld -G"
@@ -8547,14 +8552,20 @@ $as_echo "#define USE_TCL_STUBS 1" >>confdefs.h
 #--------------------------------------------------------------------
 # Redefine fdatasync as fsync on systems that lack fdatasync
 #--------------------------------------------------------------------
-
-ac_fn_c_check_func "$LINENO" "fdatasync" "ac_cv_func_fdatasync"
-if test "x$ac_cv_func_fdatasync" = xyes; then :
-
-else
-  $as_echo "#define fdatasync fsync" >>confdefs.h
+#
+#AC_CHECK_FUNC(fdatasync, , AC_DEFINE(fdatasync, fsync))
+# Check for library functions that SQLite can optionally use.
+for ac_func in fdatasync usleep fullfsync localtime_r gmtime_r
+do :
+  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
+ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
+if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
+_ACEOF
 
 fi
+done
 
 
 ac_fn_c_check_decl "$LINENO" "strerror_r" "ac_cv_have_decl_strerror_r" "$ac_includes_default"
