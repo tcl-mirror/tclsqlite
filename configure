@@ -652,9 +652,11 @@ EGREP
 GREP
 RANLIB
 SET_MAKE
+INSTALL_LIBRARY
 INSTALL_SCRIPT
 INSTALL_PROGRAM
 INSTALL_DATA
+INSTALL_DATA_DIR
 INSTALL
 CPP
 TCL_SHLIB_LD_LIBS
@@ -4162,13 +4164,18 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
-    INSTALL="\$(SHELL) \$(srcdir)/tclconfig/install-sh -c"
+    INSTALL='$(SHELL) $(srcdir)/tclconfig/install-sh -c'
+    INSTALL_DATA_DIR='${INSTALL} -d -m 755'
+    INSTALL_DATA='${INSTALL} -m 644'
+    INSTALL_PROGRAM='${INSTALL}'
+    INSTALL_SCRIPT='${INSTALL}'
+    INSTALL_LIBRARY='${INSTALL_DATA}'
 
-    INSTALL_DATA="\${INSTALL} -m 644"
 
-    INSTALL_PROGRAM="\${INSTALL}"
 
-    INSTALL_SCRIPT="\${INSTALL}"
+
+
+
 
 
     #--------------------------------------------------------------------
@@ -6926,6 +6933,7 @@ fi
 	CYGWIN_*)
 	    SHLIB_CFLAGS=""
 	    SHLIB_LD='${CC} -shared'
+	    SHLIB_LD_LIBS="${SHLIB_LD_LIBS} -Wl,--out-implib,\$@.a"
 	    SHLIB_SUFFIX=".dll"
 	    EXEEXT=".exe"
 	    do64bit_ok=yes
@@ -7245,7 +7253,14 @@ fi
 		LDFLAGS=""
 		;;
 	    *)
-		SHLIB_CFLAGS="-fPIC"
+		case "$arch" in
+		alpha|sparc64)
+		    SHLIB_CFLAGS="-fPIC"
+		    ;;
+		*)
+		    SHLIB_CFLAGS="-fpic"
+		    ;;
+		esac
 		SHLIB_LD='${CC} -shared ${SHLIB_CFLAGS}'
 		SHLIB_SUFFIX=".so"
 		if test $doRpath = yes; then :
@@ -7301,8 +7316,7 @@ fi
 	    # This configuration from FreeBSD Ports.
 	    SHLIB_CFLAGS="-fPIC"
 	    SHLIB_LD="${CC} -shared"
-	    TCL_SHLIB_LD_EXTRAS="-Wl,-soname=\$@"
-	    TK_SHLIB_LD_EXTRAS="-Wl,-soname,\$@"
+	    SHLIB_LD_LIBS="${SHLIB_LD_LIBS} -Wl,-soname,\$@"
 	    SHLIB_SUFFIX=".so"
 	    LDFLAGS=""
 	    if test $doRpath = yes; then :
@@ -8565,6 +8579,18 @@ $as_echo "#define USE_TCL_STUBS 1" >>confdefs.h
 # Redefine fdatasync as fsync on systems that lack fdatasync
 #--------------------------------------------------------------------
 
+for ac_header in malloc.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "malloc.h" "ac_cv_header_malloc_h" "$ac_includes_default"
+if test "x$ac_cv_header_malloc_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_MALLOC_H 1
+_ACEOF
+
+fi
+
+done
+
 ac_fn_c_check_func "$LINENO" "fdatasync" "ac_cv_func_fdatasync"
 if test "x$ac_cv_func_fdatasync" = xyes; then :
 
@@ -8574,7 +8600,7 @@ else
 fi
 
 # Check for library functions that SQLite can optionally use.
-for ac_func in usleep utime localtime_r gmtime_r
+for ac_func in strchrnul usleep utime localtime_r gmtime_r malloc_usable_size
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
