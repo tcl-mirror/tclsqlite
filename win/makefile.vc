@@ -254,7 +254,7 @@ TCL_CFLAGS	= -DBUILD_sqlite -DUSE_TCL_STUBS \
 #---------------------------------------------------------------------
 
 !if $(DEBUG)
-ldebug	= -debug:full -debugtype:cv
+ldebug	= -debug -debugtype:cv
 !else
 ldebug	= -release -opt:ref -opt:icf,3
 !endif
@@ -281,7 +281,22 @@ lflags	= $(lflags) -ws:aggressive
 dlllflags = $(lflags) -dll
 conlflags = $(lflags) -subsystem:console
 guilflags = $(lflags) -subsystem:windows
-baselibs   = $(TCLSTUBLIB)
+!if !$(STATIC_BUILD)
+baselibs  = $(TCLSTUBLIB)
+!if defined(TKSTUBLIB)
+baselibs  = $(baselibs) $(TKSTUBLIB)
+!endif
+!endif
+
+# Avoid 'unresolved external symbol __security_cookie' errors.
+# c.f. http://support.microsoft.com/?id=894573
+!if "$(MACHINE)" == "IA64" || "$(MACHINE)" == "AMD64"
+!if $(VCVERSION) > 1399 && $(VCVERSION) < 1500
+baselibs   = $(baselibs) bufferoverflowU.lib
+!endif
+!endif
+
+baselibs   = $(baselibs) user32.lib gdi32.lib
 
 #---------------------------------------------------------------------
 # TclTest flags
