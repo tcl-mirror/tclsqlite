@@ -534,12 +534,16 @@ static void DbDeleteCmd(void *db){
 static int DbBusyHandler(void *cd, int nTries){
   SqliteDb *pDb = (SqliteDb*)cd;
   int rc;
-  Tcl_Obj *obj = Tcl_NewStringObj(pDb->zBusy, -1);
+  char zVal[32];
+  Tcl_DString dstring;
 
-  rc = Tcl_ListObjAppendElement(pDb->interp, obj, Tcl_NewIntObj(nTries));
-  if( rc==TCL_OK ){
-    rc = Tcl_EvalObjEx(pDb->interp, obj, TCL_EVAL_GLOBAL);
-  }
+  sqlite3_snprintf(sizeof(zVal), zVal, " %d", nTries);
+  Tcl_DStringInit(&dstring);
+  Tcl_DStringAppend(&dstring, pDb->zBusy, -1);
+  Tcl_DStringAppend(&dstring, zVal, -1);
+  rc = Tcl_EvalEx(pDb->interp, Tcl_DStringValue(&dstring),
+      Tcl_DStringLength(&dstring), TCL_EVAL_GLOBAL);
+  Tcl_DStringFree(&dstring);
   if( rc!=TCL_OK || atoi(Tcl_GetStringResult(pDb->interp)) ){
     return 0;
   }
