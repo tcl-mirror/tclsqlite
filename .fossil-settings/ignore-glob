@@ -1,0 +1,9 @@
+config.log
+config.status
+Makefile
+pkgIndex.tcl
+*.a
+*.dll
+*.dylib
+*.o
+*.so
