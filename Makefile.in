@@ -238,7 +238,9 @@ install-doc: doc
 	done
 
 test: binaries libraries
-	@echo "SQLite TEA distribution does not include tests"
+	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS) \
+		-load "package ifneeded ${PACKAGE_NAME}3 ${PACKAGE_VERSION} \
+			[list load `@CYGPATH@ $(PKG_LIB_FILE)` $(PACKAGE_NAME)3]"
 
 shell: binaries libraries
 	@$(TCLSH) $(SCRIPT)
