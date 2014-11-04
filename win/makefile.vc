@@ -321,7 +321,7 @@ install:    install-binaries install-libraries install-docs
 test: setup $(PROJECT)
         set TCL_LIBRARY=$(ROOT)/library
         $(TCLSH) <<
-load $(PRJLIB:\=/)
+load $(PRJLIB:\=/) $(PROJECT)
 cd "$(ROOT)/tests"
 set argv "$(TESTFLAGS)"
 source all.tcl
