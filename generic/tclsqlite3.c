@@ -261,7 +261,7 @@ static int incrblobInput(
 */
 static int incrblobOutput(
   ClientData instanceData, 
-  CONST char *buf, 
+  const char *buf, 
   int toWrite,
   int *errorCodePtr
 ){
@@ -3103,9 +3103,9 @@ static int DbMain(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
 ** used to open a new SQLite database.  See the DbMain() routine above
 ** for additional information.
 **
-** The EXTERN macros are required by TCL in order to work on windows.
+** The DLLEXPORT macros are required by TCL in order to work on windows.
 */
-EXTERN int Sqlite3_Init(Tcl_Interp *interp){
+DLLEXPORT int Sqlite3_Init(Tcl_Interp *interp){
   int rc = Tcl_InitStubs(interp, "8.4", 0)==0 ? TCL_ERROR : TCL_OK;
   if( rc==TCL_OK ){
     Tcl_CreateObjCommand(interp, "sqlite3", (Tcl_ObjCmdProc*)DbMain, 0, 0);
@@ -3119,9 +3119,9 @@ EXTERN int Sqlite3_Init(Tcl_Interp *interp){
   }
   return rc;
 }
-EXTERN int Tclsqlite3_Init(Tcl_Interp *interp){ return Sqlite3_Init(interp); }
-EXTERN int Sqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
-EXTERN int Tclsqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
+DLLEXPORT int Tclsqlite3_Init(Tcl_Interp *interp){ return Sqlite3_Init(interp); }
+DLLEXPORT int Sqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
+DLLEXPORT int Tclsqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
 
 /* Because it accesses the file-system and uses persistent state, SQLite
 ** is not considered appropriate for safe interpreters.  Hence, we deliberately
@@ -3591,7 +3591,7 @@ static int init_all_cmd(
   ClientData cd,
   Tcl_Interp *interp,
   int objc,
-  Tcl_Obj *CONST objv[]
+  Tcl_Obj *const objv[]
 ){
 
   Tcl_Interp *slave;
@@ -3621,7 +3621,7 @@ static int db_use_legacy_prepare_cmd(
   ClientData cd,
   Tcl_Interp *interp,
   int objc,
-  Tcl_Obj *CONST objv[]
+  Tcl_Obj *const objv[]
 ){
   Tcl_CmdInfo cmdInfo;
   SqliteDb *pDb;
