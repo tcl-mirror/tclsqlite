@@ -8602,7 +8602,7 @@ else
 fi
 
 # Check for library functions that SQLite can optionally use.
-for ac_func in strchrnul usleep utime localtime_r gmtime_r malloc_usable_size
+for ac_func in strchrnul flock usleep utime localtime_r gmtime_r malloc_usable_size
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
