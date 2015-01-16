@@ -19,7 +19,7 @@ dnl	to configure the system for the local environment.
 # so you can encode the package version directly into the source files.
 #-----------------------------------------------------------------------
 
-AC_INIT([sqlite], [3.8.7.4])
+AC_INIT([sqlite], [3.8.8])
 
 #--------------------------------------------------------------------
 # Call TEA_INIT as the first TEA_ macro to set up initial vars.
@@ -169,11 +169,11 @@ AC_DEFINE(USE_TCL_STUBS, 1, [Use Tcl stubs])
 #--------------------------------------------------------------------
 # Redefine fdatasync as fsync on systems that lack fdatasync
 #--------------------------------------------------------------------
-
+#
+#AC_CHECK_FUNC(fdatasync, , AC_DEFINE(fdatasync, fsync))
 AC_CHECK_HEADERS([malloc.h])
-AC_CHECK_FUNC(fdatasync, , AC_DEFINE(fdatasync, fsync))
 # Check for library functions that SQLite can optionally use.
-AC_CHECK_FUNCS([strchrnul flock usleep utime localtime_r gmtime_r malloc_usable_size])
+AC_CHECK_FUNCS([[fdatasync gmtime_r isnan localtime_r localtime_s malloc_usable_size strchrnul usleep utime flock])
 
 AC_FUNC_STRERROR_R
 
