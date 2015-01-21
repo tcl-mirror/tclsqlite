@@ -3673,7 +3673,7 @@ static int db_last_stmt_ptr(
   ClientData cd,
   Tcl_Interp *interp,
   int objc,
-  Tcl_Obj *CONST objv[]
+  Tcl_Obj *const objv[]
 ){
   extern int sqlite3TestMakePointerStr(Tcl_Interp*, char*, void*);
   Tcl_CmdInfo cmdInfo;
