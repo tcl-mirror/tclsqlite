@@ -164,7 +164,7 @@ PROJECT = sqlite3
 !endif
 # get project version from row "AC_INIT([sqlite], [3.7.14])"
 !if [echo DOTVERSION = \>> versions.vc] \
-   && [nmakehlp -V ..\configure.in AC_INIT >> versions.vc]
+   && [nmakehlp -V ..\configure.ac AC_INIT >> versions.vc]
 !endif
 !include "versions.vc"
 
