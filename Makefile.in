@@ -307,9 +307,9 @@ dist: dist-clean
 	mkdir -p $(DIST_DIR)
 	cp -p $(srcdir)/README* $(srcdir)/license* \
 		$(srcdir)/aclocal.m4 $(srcdir)/configure $(srcdir)/*.in \
-		$(DIST_DIR)/
+		$(srcdir)/configure.ac $(DIST_DIR)/
 	chmod 664 $(DIST_DIR)/Makefile.in $(DIST_DIR)/aclocal.m4
-	chmod 775 $(DIST_DIR)/configure $(DIST_DIR)/configure.in
+	chmod 775 $(DIST_DIR)/configure $(DIST_DIR)/configure.ac
 
 	for i in $(srcdir)/*.[ch]; do \
 	    if [ -f $$i ]; then \
