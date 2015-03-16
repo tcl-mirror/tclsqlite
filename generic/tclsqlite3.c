@@ -1,7 +1,7 @@
 #ifdef USE_SYSTEM_SQLITE
 # include <sqlite3.h>
 #else
-#include "sqlite3.c"
+#include "../compat/sqlite3/sqlite3.c"
 #endif
 /*
 ** 2001 September 15
