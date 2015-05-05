@@ -182,6 +182,10 @@ static int strlen30(const char *z){
   return 0x3fffffff & (int)(z2 - z);
 }
 
+#ifdef USE_TCL_STUBS
+# define tclStubsPtr staticTclStubsPtr
+static const TclStubs *tclStubsPtr = 0;
+#endif
 
 #ifndef SQLITE_OMIT_INCRBLOB
 /*
@@ -1196,7 +1200,7 @@ static int dbPrepareAndBind(
         int n;
         u8 *data;
         const char *zType = (pVar->typePtr ? pVar->typePtr->name : "");
-        char c = zType[0];
+        c = zType[0];
         if( zVar[0]=='@' ||
            (c=='b' && strcmp(zType,"bytearray")==0 && pVar->bytes==0) ){
           /* Load a BLOB type if the Tcl variable is a bytearray and
@@ -2303,7 +2307,7 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
       }
       Tcl_DecrRefCount(pRet);
     }else{
-      ClientData cd[2];
+      ClientData cd2[2];
       DbEvalContext *p;
       Tcl_Obj *pArray = 0;
       Tcl_Obj *pScript;
@@ -2317,9 +2321,9 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
       p = (DbEvalContext *)Tcl_Alloc(sizeof(DbEvalContext));
       dbEvalInit(p, pDb, objv[2], pArray);
 
-      cd[0] = (void *)p;
-      cd[1] = (void *)pScript;
-      rc = DbEvalNextCmd(cd, interp, TCL_OK);
+      cd2[0] = (void *)p;
+      cd2[1] = (void *)pScript;
+      rc = DbEvalNextCmd(cd2, interp, TCL_OK);
     }
     break;
   }
@@ -3104,9 +3108,21 @@ static int DbMain(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
 ** Provide a dummy Tcl_InitStubs if we are using this as a static
 ** library.
 */
+#undef  Tcl_InitStubs
 #ifndef USE_TCL_STUBS
-# undef  Tcl_InitStubs
 # define Tcl_InitStubs(a,b,c) TCL_VERSION
+#else
+# define Tcl_InitStubs staticTclInitStubs
+typedef struct {
+  char *result;
+  Tcl_FreeProc *freeProc;
+  int errorLine;
+  const struct TclStubs *stubTable;
+} PrivateTclInterp;
+static const char *Tcl_InitStubs(Tcl_Interp *interp, const char *version, int exact) {
+  tclStubsPtr = ((PrivateTclInterp *)interp)->stubTable;
+  return Tcl_PkgRequireEx(interp, "Tcl", version, 0, (void *)&tclStubsPtr);
+}
 #endif
 
 /*
@@ -3709,7 +3725,44 @@ static int db_last_stmt_ptr(
 
   return TCL_OK;
 }
-#endif
+#endif /* SQLITE_TEST */
+
+#if defined(SQLITE_TEST) || defined(SQLITE_ENABLE_DBSTAT_VTAB)
+/*
+** tclcmd:   register_dbstat_vtab DB
+**
+** Cause the dbstat virtual table to be available on the connection DB
+*/
+static int sqlite3RegisterDbstatCmd(
+  void *clientData,
+  Tcl_Interp *interp,
+  int objc,
+  Tcl_Obj *const objv[]
+){
+#ifdef SQLITE_OMIT_VIRTUALTABLE
+  Tcl_AppendResult(interp, "dbstat not available because of "
+                           "SQLITE_OMIT_VIRTUALTABLE", (void*)0);
+  return TCL_ERROR;
+#else
+  struct SqliteDb { sqlite3 *db; };
+  char *zDb;
+  Tcl_CmdInfo cmdInfo;
+
+  if( objc!=2 ){
+    Tcl_WrongNumArgs(interp, 1, objv, "DB");
+    return TCL_ERROR;
+  }
+
+  zDb = Tcl_GetString(objv[1]);
+  if( Tcl_GetCommandInfo(interp, zDb, &cmdInfo) ){
+    int sqlite3_dbstat_register(sqlite3*);
+    sqlite3* db = ((struct SqliteDb*)cmdInfo.objClientData)->db;
+    sqlite3_dbstat_register(db);
+  }
+  return TCL_OK;
+#endif /* SQLITE_OMIT_VIRTUALTABLE */
+}
+#endif /* defined(SQLITE_TEST) || defined(SQLITE_ENABLE_DBSTAT_VTAB) */
 
 /*
 ** Configure the interpreter passed as the first argument to have access
@@ -3733,11 +3786,10 @@ static void init_all(Tcl_Interp *interp){
   ** of virtual table dbstat (source file test_stat.c). This command is
   ** required for testfixture and sqlite3_analyzer, but not by the production
   ** Tcl extension.  */
-#if defined(SQLITE_TEST) || TCLSH==2
-  {
-    extern int SqlitetestStat_Init(Tcl_Interp*);
-    SqlitetestStat_Init(interp);
-  }
+#if defined(SQLITE_TEST) || defined(SQLITE_ENABLE_DBSTAT_VTAB)
+  Tcl_CreateObjCommand(
+      interp, "register_dbstat_vtab", sqlite3RegisterDbstatCmd, 0, 0
+  );
 #endif
 
 #ifdef SQLITE_TEST
