@@ -3727,7 +3727,7 @@ static int db_last_stmt_ptr(
 }
 #endif /* SQLITE_TEST */
 
-#if defined(SQLITE_TEST) || defined(SQLITE_ENABLE_DBSTAT_VTAB)
+#if defined(SQLITE_TEST) && !defined(SQLITE_ENABLE_DBSTAT_VTAB)
 /*
 ** tclcmd:   register_dbstat_vtab DB
 **
@@ -3762,7 +3762,7 @@ static int sqlite3RegisterDbstatCmd(
   return TCL_OK;
 #endif /* SQLITE_OMIT_VIRTUALTABLE */
 }
-#endif /* defined(SQLITE_TEST) || defined(SQLITE_ENABLE_DBSTAT_VTAB) */
+#endif /* defined(SQLITE_TEST) && !defined(SQLITE_ENABLE_DBSTAT_VTAB) */
 
 /*
 ** Configure the interpreter passed as the first argument to have access
@@ -3783,10 +3783,10 @@ static void init_all(Tcl_Interp *interp){
 #endif
 
   /* Install the [register_dbstat_vtab] command to access the implementation
-  ** of virtual table dbstat (source file test_stat.c). This command is
+  ** of virtual table dbstat (source file dbstat.c). This command is
   ** required for testfixture and sqlite3_analyzer, but not by the production
   ** Tcl extension.  */
-#if defined(SQLITE_TEST) || defined(SQLITE_ENABLE_DBSTAT_VTAB)
+#if defined(SQLITE_TEST) && !defined(SQLITE_ENABLE_DBSTAT_VTAB)
   Tcl_CreateObjCommand(
       interp, "register_dbstat_vtab", sqlite3RegisterDbstatCmd, 0, 0
   );
