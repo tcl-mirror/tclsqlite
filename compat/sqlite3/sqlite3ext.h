@@ -267,6 +267,8 @@ struct sqlite3_api_routines {
   void (*result_text64)(sqlite3_context*,const char*,sqlite3_uint64,
                          void(*)(void*), unsigned char);
   int (*strglob)(const char*,const char*);
+  sqlite3_value *(*value_dup)(const sqlite3_value*);
+  void (*value_free)(sqlite3_value*);
 };
 
 /*
@@ -332,7 +334,8 @@ struct sqlite3_api_routines {
 #undef sqlite3_create_function
 #define sqlite3_create_function(a,b,c,d,e,f,g,h) sqlite3_create_function_v2(a,b,c,d,e,f,g,h,0)
 #define sqlite3_create_function16      sqlite3_api->create_function16
-#define sqlite3_create_module          sqlite3_api->create_module
+#undef sqlite3_create_module
+#define sqlite3_create_module(a,b,c,d) sqlite3_create_module_v2(a,b,c,d,0)
 #define sqlite3_create_module_v2       sqlite3_api->create_module_v2
 #define sqlite3_data_count             sqlite3_api->data_count
 #define sqlite3_db_handle              sqlite3_api->db_handle
@@ -468,7 +471,7 @@ struct sqlite3_api_routines {
 #define sqlite3_unlock_notify          sqlite3_api->unlock_notify
 #define sqlite3_wal_autocheckpoint     sqlite3_api->wal_autocheckpoint
 #undef sqlite3_wal_checkpoint
-#define sqlite3_wal_checkpoint(a,b)    sqlite3_api->wal_checkpoint(a,b,SQLITE_CHECKPOINT_PASSIVE,0,0)
+#define sqlite3_wal_checkpoint(a,b)    sqlite3_wal_checkpoint_v2(a,b,SQLITE_CHECKPOINT_PASSIVE,0,0)
 #define sqlite3_wal_hook               sqlite3_api->wal_hook
 #define sqlite3_blob_reopen            sqlite3_api->blob_reopen
 #define sqlite3_vtab_config            sqlite3_api->vtab_config
@@ -500,6 +503,9 @@ struct sqlite3_api_routines {
 #define sqlite3_result_blob64          sqlite3_api->result_blob64
 #define sqlite3_result_text64          sqlite3_api->result_text64
 #define sqlite3_strglob                sqlite3_api->strglob
+/* Version 3.8.11 and later */
+#define sqlite3_value_dup              sqlite3_api->value_dup
+#define sqlite3_value_free             sqlite3_api->value_free
 #endif /* SQLITE_CORE */
 
 #ifndef SQLITE_CORE

@@ -1645,7 +1645,7 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
   SqliteDb *pDb = (SqliteDb*)cd;
   int choice;
   int rc = TCL_OK;
-  static const char *DB_strs[] = {
+  static const char *const DB_strs[] = {
     "authorizer",         "backup",            "busy",
     "cache",              "changes",           "close",
     "collate",            "collation_needed",  "commit_hook",
@@ -2787,7 +2787,7 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
     }
 
     if( pDb->nTransaction==0 && objc==4 ){
-      static const char *TTYPE_strs[] = {
+      static const char *const TTYPE_strs[] = {
         "deferred",   "exclusive",  "immediate", 0
       };
       enum TTYPE_enum {
@@ -3787,6 +3787,7 @@ static void init_all(Tcl_Interp *interp){
     extern int Sqlitemultiplex_Init(Tcl_Interp*);
     extern int SqliteSuperlock_Init(Tcl_Interp*);
     extern int SqlitetestSyscall_Init(Tcl_Interp*);
+    extern int SqliteOta_Init(Tcl_Interp*);
 
 #if defined(SQLITE_ENABLE_FTS3) || defined(SQLITE_ENABLE_FTS4)
     extern int Sqlitetestfts3_Init(Tcl_Interp *interp);
@@ -3830,6 +3831,7 @@ static void init_all(Tcl_Interp *interp){
     Sqlitemultiplex_Init(interp);
     SqliteSuperlock_Init(interp);
     SqlitetestSyscall_Init(interp);
+    SqliteOta_Init(interp);
 
 #if defined(SQLITE_ENABLE_FTS3) || defined(SQLITE_ENABLE_FTS4)
     Sqlitetestfts3_Init(interp);
