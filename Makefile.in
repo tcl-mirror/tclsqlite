@@ -416,6 +416,7 @@ install-bin-binaries: binaries
 	    $(INSTALL_PROGRAM) $$p $(DESTDIR)$(bindir)/$$p; \
 	  fi; \
 	done
+	$(INSTALL_PROGRAM) $(srcdir)/compat/sqlite3/spaceanal.tcl $(DESTDIR)$(bindir)/sqlite3_analyzer
 
 .SUFFIXES: .c .$(OBJEXT)
 
