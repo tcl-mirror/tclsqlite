@@ -211,7 +211,7 @@ COMPATDIR	= $(ROOT)\compat
 !if !$(DEBUG)
 !if $(OPTIMIZING)
 ### This cranks the optimization level to maximize speed
-cdebug	= -O2 -Op -Gs
+cdebug	= $(OPTIMIZATIONS)
 !else
 cdebug	=
 !endif
@@ -223,7 +223,8 @@ cdebug	= -Z7 -WX -Od -GZ
 !endif
 
 ### Declarations common to all compiler options
-cflags = -nologo -c -W3 -YX -Fp$(TMP_DIR)^\
+cwarn = $(WARNINGS) -D _CRT_SECURE_NO_DEPRECATE -D _CRT_NONSTDC_NO_DEPRECATE
+cflags = -nologo -c $(COMPILERFLAGS) $(cwarn) -Fp$(TMP_DIR)^\
 
 !if $(MSVCRT)
 !if $(DEBUG)
