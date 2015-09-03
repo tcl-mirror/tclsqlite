@@ -211,7 +211,7 @@ COMPATDIR	= $(ROOT)\compat
 !if !$(DEBUG)
 !if $(OPTIMIZING)
 ### This cranks the optimization level to maximize speed
-cdebug	= -O2 -Op -Gs
+cdebug	= $(OPTIMIZATIONS)
 !else
 cdebug	=
 !endif
@@ -223,7 +223,8 @@ cdebug	= -Z7 -WX -Od -GZ
 !endif
 
 ### Declarations common to all compiler options
-cflags = -nologo -c -W3 -YX -Fp$(TMP_DIR)^\
+cwarn = $(WARNINGS) -D _CRT_SECURE_NO_DEPRECATE -D _CRT_NONSTDC_NO_DEPRECATE
+cflags = -nologo -c $(COMPILERFLAGS) $(cwarn) -Fp$(TMP_DIR)^\
 
 !if $(MSVCRT)
 !if $(DEBUG)
@@ -257,15 +258,22 @@ TCL_CFLAGS	= -DBUILD_sqlite -DUSE_TCL_STUBS \
 
 !if $(DEBUG)
 ldebug	= -debug -debugtype:cv
+!if $(MSVCRT)
+ldebug = $(ldebug) -nodefaultlib:msvcrt
+!endif
 !else
 ldebug	= -release -opt:ref -opt:icf,3
 !endif
 
 ### Declarations common to all linker options
-lflags	= -nologo -machine:$(MACHINE) $(ldebug)
+lflags	= -nologo -machine:$(MACHINE) $(LINKERFLAGS) $(ldebug)
 
 !if $(PROFILE)
 lflags	= $(lflags) -profile
+!endif
+
+!if $(MSVCRT) && !($(DEBUG) && !$(UNCHECKED)) && $(VCVERSION) >= 1900
+lflags	= $(lflags) -nodefaultlib:libucrt.lib
 !endif
 
 !if $(ALIGN98_HACK) && !$(STATIC_BUILD)
@@ -296,6 +304,9 @@ baselibs  = $(baselibs) $(TKSTUBLIB)
 !if $(VCVERSION) > 1399 && $(VCVERSION) < 1500
 baselibs   = $(baselibs) bufferoverflowU.lib
 !endif
+!endif
+!if $(MSVCRT) && !($(DEBUG) && !$(UNCHECKED)) && $(VCVERSION) >= 1900
+baselibs   = $(baselibs) ucrt.lib
 !endif
 
 baselibs   = $(baselibs) user32.lib gdi32.lib
