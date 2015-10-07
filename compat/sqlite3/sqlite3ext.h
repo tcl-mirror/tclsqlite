@@ -361,9 +361,6 @@ struct sqlite3_api_routines {
 #define sqlite3_get_autocommit         sqlite3_api->get_autocommit
 #define sqlite3_get_auxdata            sqlite3_api->get_auxdata
 #define sqlite3_get_table              sqlite3_api->get_table
-#ifndef SQLITE_OMIT_DEPRECATED
-#define sqlite3_global_recover         sqlite3_api->global_recover
-#endif
 #define sqlite3_interrupt              sqlite3_api->interruptx
 #define sqlite3_last_insert_rowid      sqlite3_api->last_insert_rowid
 #define sqlite3_libversion             sqlite3_api->libversion
@@ -398,7 +395,6 @@ struct sqlite3_api_routines {
 #define sqlite3_snprintf               sqlite3_api->snprintf
 #define sqlite3_step                   sqlite3_api->step
 #define sqlite3_table_column_metadata  sqlite3_api->table_column_metadata
-#define sqlite3_thread_cleanup         sqlite3_api->thread_cleanup
 #define sqlite3_total_changes          sqlite3_api->total_changes
 #define sqlite3_trace                  sqlite3_api->trace
 #ifndef SQLITE_OMIT_DEPRECATED
