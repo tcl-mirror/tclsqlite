@@ -272,7 +272,7 @@ struct sqlite3_api_routines {
   void (*value_free)(sqlite3_value*);
   int (*result_zeroblob64)(sqlite3_context*,sqlite3_uint64);
   int (*bind_zeroblob64)(sqlite3_stmt*, int, sqlite3_uint64);
-  /* Version 3.8.12 and later */
+  /* Version 3.9.0 and later */
   unsigned int (*value_subtype)(sqlite3_value*);
   void (*result_subtype)(sqlite3_context*,unsigned int);
   void *r1;void *r2;void *r3;void *r4;void *r5;void *r6;void *r7;void *r8;
@@ -291,9 +291,6 @@ struct sqlite3_api_routines {
 */
 #if !defined(SQLITE_CORE) && !defined(SQLITE_OMIT_LOAD_EXTENSION)
 #define sqlite3_aggregate_context      sqlite3_api->aggregate_context
-#ifndef SQLITE_OMIT_DEPRECATED
-#define sqlite3_aggregate_count        sqlite3_api->aggregate_count
-#endif
 #define sqlite3_bind_blob              sqlite3_api->bind_blob
 #define sqlite3_bind_double            sqlite3_api->bind_double
 #define sqlite3_bind_int               sqlite3_api->bind_int
@@ -352,9 +349,6 @@ struct sqlite3_api_routines {
 #define sqlite3_errmsg                 sqlite3_api->errmsg
 #define sqlite3_errmsg16               sqlite3_api->errmsg16
 #define sqlite3_exec                   sqlite3_api->exec
-#ifndef SQLITE_OMIT_DEPRECATED
-#define sqlite3_expired                sqlite3_api->expired
-#endif
 #define sqlite3_finalize               sqlite3_api->finalize
 #define sqlite3_free                   sqlite3_api->free
 #define sqlite3_free_table             sqlite3_api->free_table
@@ -397,9 +391,6 @@ struct sqlite3_api_routines {
 #define sqlite3_table_column_metadata  sqlite3_api->table_column_metadata
 #define sqlite3_total_changes          sqlite3_api->total_changes
 #define sqlite3_trace                  sqlite3_api->trace
-#ifndef SQLITE_OMIT_DEPRECATED
-#define sqlite3_transfer_bindings      sqlite3_api->transfer_bindings
-#endif
 #define sqlite3_update_hook            sqlite3_api->update_hook
 #define sqlite3_user_data              sqlite3_api->user_data
 #define sqlite3_value_blob             sqlite3_api->value_blob
@@ -512,7 +503,7 @@ struct sqlite3_api_routines {
 #define sqlite3_value_free             sqlite3_api->value_free
 #define sqlite3_result_zeroblob64      sqlite3_api->result_zeroblob64
 #define sqlite3_bind_zeroblob64        sqlite3_api->bind_zeroblob64
-/* Version 3.8.12 and later */
+/* Version 3.9.0 and later */
 #define sqlite3_value_subtype          sqlite3_api->value_subtype
 #define sqlite3_result_subtype         sqlite3_api->result_subtype
 #endif /* !defined(SQLITE_CORE) && !defined(SQLITE_OMIT_LOAD_EXTENSION) */
