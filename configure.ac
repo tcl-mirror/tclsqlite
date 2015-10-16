@@ -19,7 +19,7 @@ dnl	to configure the system for the local environment.
 # so you can encode the package version directly into the source files.
 #-----------------------------------------------------------------------
 
-AC_INIT([sqlite], [3.9.0])
+AC_INIT([sqlite], [3.9.1])
 
 #--------------------------------------------------------------------
 # Call TEA_INIT as the first TEA_ macro to set up initial vars.
@@ -76,8 +76,10 @@ TEA_ADD_HEADERS([])
 TEA_ADD_INCLUDES([-I\"`\${CYGPATH} \${srcdir}/generic`\"])
 TEA_ADD_LIBS([])
 TEA_ADD_CFLAGS([-DSQLITE_ENABLE_DBSTAT_VTAB=1])
-TEA_ADD_CFLAGS([-DSQLITE_ENABLE_FTS4=1])
 TEA_ADD_CFLAGS([-DSQLITE_ENABLE_FTS3_PARENTHESIS=1])
+TEA_ADD_CFLAGS([-DSQLITE_ENABLE_FTS4=1])
+TEA_ADD_CFLAGS([-DSQLITE_ENABLE_FTS5=1])
+TEA_ADD_CFLAGS([-DSQLITE_ENABLE_JSON1=1])
 TEA_ADD_CFLAGS([-DSQLITE_3_SUFFIX_ONLY=1])
 TEA_ADD_CFLAGS([-DSQLITE_ENABLE_RTREE=1])
 TEA_ADD_CFLAGS([-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT=1])

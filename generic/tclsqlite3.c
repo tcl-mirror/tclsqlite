@@ -2381,8 +2381,8 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
     pFunc->pScript = pScript;
     Tcl_IncrRefCount(pScript);
     pFunc->useEvalObjv = safeToUseEvalObjv(interp, pScript);
-    rc = sqlite3_create_function(pDb->db, zName, nArg, flags,
-        pFunc, tclSqlFunc, 0, 0);
+    rc = sqlite3_create_function_v2(pDb->db, zName, nArg, flags,
+        pFunc, tclSqlFunc, 0, 0, 0);
     if( rc!=SQLITE_OK ){
       rc = TCL_ERROR;
       Tcl_SetResult(interp, (char *)sqlite3_errmsg(pDb->db), TCL_VOLATILE);
