@@ -964,6 +964,7 @@ static int auth_callback(
 }
 #endif /* SQLITE_OMIT_AUTHORIZATION */
 
+#if 0
 /*
 ** This routine reads a line of text from FILE in, stores
 ** the text in memory obtained from malloc() and returns a pointer
@@ -1008,6 +1009,7 @@ static char *local_getline(char *zPrompt, FILE *in){
   zLine = realloc( zLine, n+1 );
   return zLine;
 }
+#endif
 
 
 /*
@@ -2040,9 +2042,10 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
     char *zLine;                /* A single line of input from the file */
     char **azCol;               /* zLine[] broken up into columns */
     const char *zCommit;        /* How to commit changes */
-    FILE *in;                   /* The input file */
+    Tcl_Channel in;             /* The input file */
     int lineno = 0;             /* Line number of input file */
     char zLineNum[80];          /* Line number print buffer */
+    Tcl_DString str;
     Tcl_Obj *pResult;           /* interp result */
 
     const char *zSep;
@@ -2121,23 +2124,24 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
       sqlite3_finalize(pStmt);
       return TCL_ERROR;
     }
-    in = fopen(zFile, "rb");
+    in = Tcl_OpenFileChannel(interp, zFile, "r", 0666);
     if( in==0 ){
-      Tcl_AppendResult(interp, "Error: cannot open file: ", zFile, (char*)0);
       sqlite3_finalize(pStmt);
       return TCL_ERROR;
     }
     azCol = malloc( sizeof(azCol[0])*(nCol+1) );
     if( azCol==0 ) {
       Tcl_AppendResult(interp, "Error: can't malloc()", (char*)0);
-      fclose(in);
+      Tcl_Close(interp, in);
       return TCL_ERROR;
     }
+    Tcl_DStringInit(&str);
     (void)sqlite3_exec(pDb->db, "BEGIN", 0, 0, 0);
     zCommit = "COMMIT";
-    while( (zLine = local_getline(0, in))!=0 ){
+    while( Tcl_Gets(in, &str)!=-1 ){
       char *z;
       lineno++;
+      zLine = Tcl_DStringValue(&str);
       azCol[0] = zLine;
       for(i=0, z=zLine; *z; z++){
         if( *z==zSep[0] && strncmp(z, zSep, nSep)==0 ){
@@ -2175,15 +2179,16 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
       }
       sqlite3_step(pStmt);
       rc = sqlite3_reset(pStmt);
-      free(zLine);
+      Tcl_DStringSetLength(&str, 0);
       if( rc!=SQLITE_OK ){
         Tcl_AppendResult(interp,"Error: ", sqlite3_errmsg(pDb->db), (char*)0);
         zCommit = "ROLLBACK";
         break;
       }
     }
+    Tcl_DStringFree(&str);
     free(azCol);
-    fclose(in);
+    Tcl_Close(interp, in);
     sqlite3_finalize(pStmt);
     (void)sqlite3_exec(pDb->db, zCommit, 0, 0, 0);
 
@@ -3500,7 +3505,7 @@ static int md5_cmd(void*cd, Tcl_Interp *interp, int argc, const char **argv){
 ** name of the file.
 */
 static int md5file_cmd(void*cd, Tcl_Interp*interp, int argc, const char **argv){
-  FILE *in;
+  Tcl_Channel in;
   MD5Context ctx;
   void (*converter)(unsigned char*, char*);
   unsigned char digest[16];
@@ -3511,20 +3516,18 @@ static int md5file_cmd(void*cd, Tcl_Interp*interp, int argc, const char **argv){
         " FILENAME\"", (char*)0);
     return TCL_ERROR;
   }
-  in = fopen(argv[1],"rb");
+  in = Tcl_OpenFileChannel(interp,argv[1],"rb",0666);
   if( in==0 ){
-    Tcl_AppendResult(interp,"unable to open file \"", argv[1], 
-         "\" for reading", (char*)0);
     return TCL_ERROR;
   }
   MD5Init(&ctx);
   for(;;){
     int n;
-    n = (int)fread(zBuf, 1, sizeof(zBuf), in);
-    if( n<=0 ) break;
+    n = (int)Tcl_Read(in, zBuf, sizeof(zBuf));
+    if( n==-1 ) break;
     MD5Update(&ctx, (unsigned char*)zBuf, (unsigned)n);
   }
-  fclose(in);
+  Tcl_Close(interp, in);
   MD5Final(digest, &ctx);
   converter = (void(*)(unsigned char*,char*))cd;
   converter(digest, zBuf);
