@@ -110,7 +110,7 @@ struct sqlite3_api_routines {
   sqlite_int64  (*last_insert_rowid)(sqlite3*);
   const char * (*libversion)(void);
   int  (*libversion_number)(void);
-  void *(*malloc)(int);
+  void *(*malloc)(unsigned int);
   char * (*mprintf)(const char*,...);
   int  (*open)(const char*,sqlite3**);
   int  (*open16)(const void*,sqlite3**);
@@ -118,7 +118,7 @@ struct sqlite3_api_routines {
   int  (*prepare16)(sqlite3*,const void*,int,sqlite3_stmt**,const void**);
   void * (*profile)(sqlite3*,void(*)(void*,const char*,sqlite_uint64),void*);
   void  (*progress_handler)(sqlite3*,int,int(*)(void*),void*);
-  void *(*realloc)(void*,int);
+  void *(*realloc)(void*,unsigned int);
   int  (*reset)(sqlite3_stmt*pStmt);
   void  (*result_blob)(sqlite3_context*,const void*,int,void(*)(void*));
   void  (*result_double)(sqlite3_context*,double);
@@ -431,7 +431,9 @@ struct sqlite3_api_routines {
 #define sqlite3_result_error_nomem     sqlite3_api->result_error_nomem
 #define sqlite3_result_error_toobig    sqlite3_api->result_error_toobig
 #define sqlite3_sleep                  sqlite3_api->sleep
+#ifndef SQLITE_OMIT_DEPRECATED
 #define sqlite3_soft_heap_limit        sqlite3_api->soft_heap_limit
+#endif
 #define sqlite3_vfs_find               sqlite3_api->vfs_find
 #define sqlite3_vfs_register           sqlite3_api->vfs_register
 #define sqlite3_vfs_unregister         sqlite3_api->vfs_unregister

@@ -2373,9 +2373,9 @@ SQLITE_API char *SQLITE_STDCALL sqlite3_vsnprintf(int,char*,const char*, va_list
 ** a block of memory after it has been released using
 ** [sqlite3_free()] or [sqlite3_realloc()].
 */
-SQLITE_API void *SQLITE_STDCALL sqlite3_malloc(int);
+SQLITE_API void *SQLITE_STDCALL sqlite3_malloc(unsigned int);
 SQLITE_API void *SQLITE_STDCALL sqlite3_malloc64(sqlite3_uint64);
-SQLITE_API void *SQLITE_STDCALL sqlite3_realloc(void*, int);
+SQLITE_API void *SQLITE_STDCALL sqlite3_realloc(void*, unsigned int);
 SQLITE_API void *SQLITE_STDCALL sqlite3_realloc64(void*, sqlite3_uint64);
 SQLITE_API void SQLITE_STDCALL sqlite3_free(void*);
 SQLITE_API sqlite3_uint64 SQLITE_STDCALL sqlite3_msize(void*);
