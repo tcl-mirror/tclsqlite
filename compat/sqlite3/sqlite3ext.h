@@ -359,7 +359,9 @@ struct sqlite3_api_routines {
 #define sqlite3_last_insert_rowid      sqlite3_api->last_insert_rowid
 #define sqlite3_libversion             sqlite3_api->libversion
 #define sqlite3_libversion_number      sqlite3_api->libversion_number
+#if !defined(sqlite3_malloc)
 #define sqlite3_malloc                 sqlite3_api->malloc
+#endif
 #define sqlite3_mprintf                sqlite3_api->mprintf
 #define sqlite3_open                   sqlite3_api->open
 #define sqlite3_open16                 sqlite3_api->open16
@@ -369,7 +371,9 @@ struct sqlite3_api_routines {
 #define sqlite3_prepare16_v2           sqlite3_api->prepare16_v2
 #define sqlite3_profile                sqlite3_api->profile
 #define sqlite3_progress_handler       sqlite3_api->progress_handler
+#if !defined(sqlite3_realloc)
 #define sqlite3_realloc                sqlite3_api->realloc
+#endif
 #define sqlite3_reset                  sqlite3_api->reset
 #define sqlite3_result_blob            sqlite3_api->result_blob
 #define sqlite3_result_double          sqlite3_api->result_double
@@ -431,9 +435,6 @@ struct sqlite3_api_routines {
 #define sqlite3_result_error_nomem     sqlite3_api->result_error_nomem
 #define sqlite3_result_error_toobig    sqlite3_api->result_error_toobig
 #define sqlite3_sleep                  sqlite3_api->sleep
-#ifndef SQLITE_OMIT_DEPRECATED
-#define sqlite3_soft_heap_limit        sqlite3_api->soft_heap_limit
-#endif
 #define sqlite3_vfs_find               sqlite3_api->vfs_find
 #define sqlite3_vfs_register           sqlite3_api->vfs_register
 #define sqlite3_vfs_unregister         sqlite3_api->vfs_unregister

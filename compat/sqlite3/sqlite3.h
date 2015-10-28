@@ -2381,6 +2381,17 @@ SQLITE_API void SQLITE_STDCALL sqlite3_free(void*);
 SQLITE_API sqlite3_uint64 SQLITE_STDCALL sqlite3_msize(void*);
 
 /*
+ * If we are not sure the platform is 32-bit, always use sqlite3_malloc64()
+ * in stead of sqlite3_malloc() for allocations, in order to prevent overflow.
+ */
+#if !defined(i386)     && !defined(__i386__)   && !defined(_M_IX86) && \
+    !defined(_M_ARM)   && !defined(__arm__)    && !defined(__x86) && \
+    (!defined(__SIZEOF_POINTER__) || (__SIZEOF_POINTER__ != 4))
+# define sqlite3_malloc(x) sqlite3_malloc64(x)
+# define sqlite3_realloc(x,y) sqlite3_realloc64(x,y)
+#endif
+
+/*
 ** CAPI3REF: Memory Allocator Statistics
 **
 ** SQLite provides these two interfaces for reporting on the status
@@ -5222,6 +5233,7 @@ SQLITE_API sqlite3_int64 SQLITE_STDCALL sqlite3_soft_heap_limit64(sqlite3_int64 
 */
 SQLITE_API SQLITE_DEPRECATED void SQLITE_STDCALL sqlite3_soft_heap_limit(int N);
 
+#define sqlite3_soft_heap_limit(N) sqlite3_soft_heap_limit64(N)
 
 /*
 ** CAPI3REF: Extract Metadata About A Column Of A Table
