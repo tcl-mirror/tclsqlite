@@ -2109,7 +2109,7 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
     if( nCol==0 ) {
       return TCL_ERROR;
     }
-    zSql = malloc( nByte + 50 + nCol*2 );
+    zSql = sqlite3_malloc( nByte + 50 + nCol*2 );
     if( zSql==0 ) {
       Tcl_AppendResult(interp, "Error: can't malloc()", (char*)0);
       return TCL_ERROR;
@@ -2124,7 +2124,7 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
     zSql[j++] = ')';
     zSql[j] = 0;
     rc = sqlite3_prepare(pDb->db, zSql, -1, &pStmt, 0);
-    free(zSql);
+    sqlite3_free(zSql);
     if( rc ){
       Tcl_AppendResult(interp, "Error: ", sqlite3_errmsg(pDb->db), (char*)0);
       sqlite3_finalize(pStmt);
@@ -2135,7 +2135,7 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
       sqlite3_finalize(pStmt);
       return TCL_ERROR;
     }
-    azCol = malloc( sizeof(azCol[0])*(nCol+1) );
+    azCol = sqlite3_malloc( sizeof(azCol[0])*(nCol+1) );
     if( azCol==0 ) {
       Tcl_AppendResult(interp, "Error: can't malloc()", (char*)0);
       Tcl_Close(interp, in);
@@ -2193,7 +2193,7 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
       }
     }
     Tcl_DStringFree(&str);
-    free(azCol);
+    sqlite3_free(azCol);
     Tcl_Close(interp, in);
     sqlite3_finalize(pStmt);
     (void)sqlite3_exec(pDb->db, zCommit, 0, 0, 0);
@@ -3530,7 +3530,7 @@ static int md5file_cmd(void*cd, Tcl_Interp*interp, int argc, const char **argv){
   for(;;){
     int n;
     n = (int)Tcl_Read(in, zBuf, sizeof(zBuf));
-    if( n==-1 ) break;
+    if( n<=0 ) break;
     MD5Update(&ctx, (unsigned char*)zBuf, (unsigned)n);
   }
   Tcl_Close(interp, in);
