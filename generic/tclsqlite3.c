@@ -2103,7 +2103,7 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
     if( nCol==0 ) {
       return TCL_ERROR;
     }
-    zSql = sqlite3_malloc64( nByte + 50 + nCol*2 );
+    zSql = sqlite3_malloc( nByte + 50 + nCol*2 );
     if( zSql==0 ) {
       Tcl_AppendResult(interp, "Error: can't malloc()", (char*)0);
       return TCL_ERROR;
@@ -2129,7 +2129,7 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
       sqlite3_finalize(pStmt);
       return TCL_ERROR;
     }
-    azCol = sqlite3_malloc64( sizeof(azCol[0])*(nCol+1) );
+    azCol = sqlite3_malloc( sizeof(azCol[0])*(nCol+1) );
     if( azCol==0 ) {
       Tcl_AppendResult(interp, "Error: can't malloc()", (char*)0);
       Tcl_Close(interp, in);
@@ -3522,7 +3522,8 @@ static int md5file_cmd(void*cd, Tcl_Interp*interp, int argc, const char **argv){
   }
   MD5Init(&ctx);
   for(;;){
-    int n = Tcl_Read(in, zBuf, sizeof(zBuf));
+    int n;
+    n = (int)Tcl_Read(in, zBuf, sizeof(zBuf));
     if( n<=0 ) break;
     MD5Update(&ctx, (unsigned char*)zBuf, (unsigned)n);
   }
