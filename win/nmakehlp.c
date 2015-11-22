@@ -47,7 +47,7 @@ static int CheckForLinkerFeature(const char *option);
 static int IsIn(const char *string, const char *substring);
 static int SubstituteFile(const char *substs, const char *filename);
 static int QualifyPath(const char *path);
-static const char *GetVersionFromFile(const char *filename, const char *match);
+static const char *GetVersionFromFile(const char *filename, const char *match, int numdots);
 static DWORD WINAPI ReadFromPipe(LPVOID args);
 
 /* globals */
@@ -153,7 +153,7 @@ main(
 		    &dwWritten, NULL);
 		return 0;
 	    }
-	    printf("%s\n", GetVersionFromFile(argv[2], argv[3]));
+	    printf("%s\n", GetVersionFromFile(argv[2], argv[3], *(argv[1]+2) - '0'));
 	    return 0;
 	case 'Q':
 	    if (argc != 3) {
@@ -479,7 +479,8 @@ IsIn(
 static const char *
 GetVersionFromFile(
     const char *filename,
-    const char *match)
+    const char *match,
+    int numdots)
 {
     size_t cbBuffer = 100;
     static char szBuffer[100];
@@ -497,9 +498,10 @@ GetVersionFromFile(
 	    p = strstr(szBuffer, match);
 	    if (p != NULL) {
 		/*
-		 * Skip to first digit.
+		 * Skip to first digit after the match.
 		 */
 
+		p += strlen(match);
 		while (*p && !isdigit(*p)) {
 		    ++p;
 		}
@@ -509,7 +511,8 @@ GetVersionFromFile(
 		 */
 
 		q = p;
-		while (*q && (isalnum(*q) || *q == '.')) {
+		while (*q && (strchr("0123456789.ab", *q)) && ((!strchr(".ab", *q)
+			    && (!strchr("ab", q[-1])) || --numdots))) {
 		    ++q;
 		}
 
@@ -603,8 +606,8 @@ SubstituteFile(
 	sp = fopen(substitutions, "rt");
 	if (sp != NULL) {
 	    while (fgets(szBuffer, cbBuffer, sp) != NULL) {
-		char *ks, *ke, *vs, *ve;
-		ks = szBuffer;
+		unsigned char *ks, *ke, *vs, *ve;
+		ks = (unsigned char*)szBuffer;
 		while (ks && *ks && isspace(*ks)) ++ks;
 		ke = ks;
 		while (ke && *ke && !isspace(*ke)) ++ke;
@@ -613,7 +616,7 @@ SubstituteFile(
 		ve = vs;
 		while (ve && *ve && !(*ve == '\r' || *ve == '\n')) ++ve;
 		*ke = 0, *ve = 0;
-		list_insert(&substPtr, ks, vs);
+		list_insert(&substPtr, (char*)ks, (char*)vs);
 	    }
 	    fclose(sp);
 	}
@@ -628,11 +631,11 @@ SubstituteFile(
 	    }
 	}
 #endif
-	
+
 	/*
 	 * Run the substitutions over each line of the input
 	 */
-	
+
 	while (fgets(szBuffer, cbBuffer, fp) != NULL) {
 	    list_item_t *p = NULL;
 	    for (p = substPtr; p != NULL; p = p->nextPtr) {
@@ -652,7 +655,7 @@ SubstituteFile(
 	    }
 	    printf(szBuffer);
 	}
-	
+
 	list_free(&substPtr);
     }
     fclose(fp);
