@@ -546,10 +546,16 @@ static void DbDeleteCmd(void *db){
 static int DbBusyHandler(void *cd, int nTries){
   SqliteDb *pDb = (SqliteDb*)cd;
   int rc;
-  char zVal[30];
+  char zVal[32];
+  Tcl_DString dstring;
 
-  sqlite3_snprintf(sizeof(zVal), zVal, "%d", nTries);
-  rc = Tcl_VarEval(pDb->interp, pDb->zBusy, " ", zVal, (char*)0);
+  sqlite3_snprintf(sizeof(zVal), zVal, " %d", nTries);
+  Tcl_DStringInit(&dstring);
+  Tcl_DStringAppend(&dstring, pDb->zBusy, -1);
+  Tcl_DStringAppend(&dstring, zVal, -1);
+  rc = Tcl_EvalEx(pDb->interp, Tcl_DStringValue(&dstring),
+      Tcl_DStringLength(&dstring), TCL_EVAL_GLOBAL);
+  Tcl_DStringFree(&dstring);
   if( rc!=TCL_OK || atoi(Tcl_GetStringResult(pDb->interp)) ){
     return 0;
   }
@@ -870,8 +876,8 @@ static void tclSqlFunc(sqlite3_context *context, int argc, sqlite3_value**argv){
       Tcl_GetWideIntFromObj(0, pVar, &v);
       sqlite3_result_int64(context, v);
     }else{
-      data = (unsigned char *)Tcl_GetStringFromObj(pVar, &n);
-      sqlite3_result_text(context, (char *)data, n, SQLITE_TRANSIENT);
+      data = (unsigned char *)Tcl_GetString(pVar);
+      sqlite3_result_text(context, (char *)data, pVar->length, SQLITE_TRANSIENT);
     }
   }
 }
@@ -1225,8 +1231,8 @@ static int dbPrepareAndBind(
           Tcl_GetWideIntFromObj(interp, pVar, &v);
           sqlite3_bind_int64(pStmt, i, v);
         }else{
-          data = (unsigned char *)Tcl_GetStringFromObj(pVar, &n);
-          sqlite3_bind_text(pStmt, i, (char *)data, n, SQLITE_STATIC);
+          data = (unsigned char *)Tcl_GetString(pVar);
+          sqlite3_bind_text(pStmt, i, (char *)data, pVar->length, SQLITE_STATIC);
           Tcl_IncrRefCount(pVar);
           pPreStmt->apParm[iParm++] = pVar;
         }
@@ -2169,12 +2175,13 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
       }
       for(i=0; i<nCol; i++){
         /* check for null data, if so, bind as null */
+        size_t len = strlen30(azCol[i]);
         if( (nNull>0 && strcmp(azCol[i], zNull)==0)
-          || strlen30(azCol[i])==0 
+          || len==0 
         ){
           sqlite3_bind_null(pStmt, i+1);
         }else{
-          sqlite3_bind_text(pStmt, i+1, azCol[i], -1, SQLITE_STATIC);
+          sqlite3_bind_text(pStmt, i+1, azCol[i], len, SQLITE_STATIC);
         }
       }
       sqlite3_step(pStmt);
@@ -3492,7 +3499,7 @@ static int md5_cmd(void*cd, Tcl_Interp *interp, int argc, const char **argv){
     return TCL_ERROR;
   }
   MD5Init(&ctx);
-  MD5Update(&ctx, (unsigned char*)argv[1], (unsigned)strlen(argv[1]));
+  MD5Update(&ctx, (unsigned char*)argv[1], (unsigned)strlen30(argv[1]));
   MD5Final(digest, &ctx);
   converter = (void(*)(unsigned char*,char*))cd;
   converter(digest, zBuf);
@@ -3569,7 +3576,7 @@ static void md5step(sqlite3_context *context, int argc, sqlite3_value **argv){
   for(i=0; i<argc; i++){
     const char *zData = (char*)sqlite3_value_text(argv[i]);
     if( zData ){
-      MD5Update(p, (unsigned char*)zData, (int)strlen(zData));
+      MD5Update(p, (unsigned char*)zData, (int)strlen30(zData));
     }
   }
 }
@@ -3580,7 +3587,7 @@ static void md5finalize(sqlite3_context *context){
   p = sqlite3_aggregate_context(context, sizeof(*p));
   MD5Final(digest,p);
   MD5DigestToBase16(digest, zBuf);
-  sqlite3_result_text(context, zBuf, -1, SQLITE_TRANSIENT);
+  sqlite3_result_text(context, zBuf, strlen30(zBuf), SQLITE_TRANSIENT);
 }
 int Md5_Register(sqlite3 *db){
   int rc = sqlite3_create_function(db, "md5sum", -1, SQLITE_UTF8, 0, 0, 
