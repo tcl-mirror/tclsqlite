@@ -67,13 +67,17 @@
 #endif
 
 /*
- * Windows needs to know which symbols to export.  Unix does not.
- * BUILD_sqlite should be undefined for Unix.
+ * If we are not sure the platform is 32-bit, always use sqlite3_????64()
+ * in stead of sqlite3_????() for certain functions, in order to prevent overflow.
  */
-#ifdef BUILD_sqlite
-#undef TCL_STORAGE_CLASS
-#define TCL_STORAGE_CLASS DLLEXPORT
-#endif /* BUILD_sqlite */
+#if !defined(i386)     && !defined(__i386__)   && !defined(_M_IX86) && \
+    !defined(_M_ARM)   && !defined(__arm__)    && !defined(__x86) && \
+    (!defined(__SIZEOF_POINTER__) || (__SIZEOF_POINTER__ != 4))
+# undef sqlite3_bind_text
+# undef sqlite3_result_text
+# define sqlite3_bind_text(pStmt, i, zData, nData, xDel) sqlite3_bind_text64(pStmt, i, zData, nData, xDel, SQLITE_UTF8)
+# define sqlite3_result_text(pCtx, z, n, xDel) sqlite3_result_text64(pCtx, z, n, xDel, SQLITE_UTF8)
+#endif
 
 #define NUM_PREPARED_STMTS 10
 #define MAX_PREPARED_STMTS 100
@@ -1647,7 +1651,7 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
   SqliteDb *pDb = (SqliteDb*)cd;
   int choice;
   int rc = TCL_OK;
-  static const char *const DB_strs[] = {
+  static const char *DB_strs[] = {
     "authorizer",         "backup",            "busy",
     "cache",              "changes",           "close",
     "collate",            "collation_needed",  "commit_hook",
@@ -2793,7 +2797,7 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
     }
 
     if( pDb->nTransaction==0 && objc==4 ){
-      static const char *const TTYPE_strs[] = {
+      static const char *TTYPE_strs[] = {
         "deferred",   "exclusive",  "immediate", 0
       };
       enum TTYPE_enum {
@@ -3913,11 +3917,17 @@ int TCLSH_MAIN(int argc, char **argv){
       Tcl_SetVar(interp, "argv", argv[i],
           TCL_GLOBAL_ONLY | TCL_LIST_ELEMENT | TCL_APPEND_VALUE);
     }
-    if( TCLSH==1 && Tcl_EvalFile(interp, argv[1])!=TCL_OK ){
-      const char *zInfo = Tcl_GetVar(interp, "errorInfo", TCL_GLOBAL_ONLY);
-      if( zInfo==0 ) zInfo = Tcl_GetStringResult(interp);
-      fprintf(stderr,"%s: %s\n", *argv, zInfo);
-      return 1;
+    if( TCLSH==1 ) {
+      Tcl_Obj *pathPtr = Tcl_NewStringObj(argv[1],-1);
+      Tcl_IncrRefCount(pathPtr);
+      if (Tcl_FSEvalFile(interp, pathPtr)!=TCL_OK ){
+        const char *zInfo = Tcl_GetVar(interp, "errorInfo", TCL_GLOBAL_ONLY);
+        if( zInfo==0 ) zInfo = Tcl_GetStringResult(interp);
+        fprintf(stderr,"%s: %s\n", *argv, zInfo);
+        Tcl_DecrRefCount(pathPtr);
+        return 1;
+      }
+      Tcl_DecrRefCount(pathPtr);
     }
   }
   if( TCLSH==2 || argc<=1 ){
