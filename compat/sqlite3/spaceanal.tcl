@@ -30,7 +30,7 @@ proc is_without_rowid {tname} {
 # Get the name of the database to analyze
 #
 proc usage {} {
-  set argv0 [file rootname [file tail [info nameofexecutable]]]
+  set argv0 [file rootname [file tail [info script]]]
   puts stderr "Usage: $argv0 ?--pageinfo? ?--stats? database-filename"
   puts stderr {
 Analyze the SQLite3 database file specified by the "database-filename"
