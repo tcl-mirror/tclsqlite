@@ -575,7 +575,7 @@ static int DbProgressHandler(void *cd){
   int rc;
 
   assert( pDb->zProgress );
-  rc = Tcl_Eval(pDb->interp, pDb->zProgress);
+  rc = Tcl_EvalEx(pDb->interp, pDb->zProgress, -1, 0);
   if( rc!=TCL_OK || atoi(Tcl_GetStringResult(pDb->interp)) ){
     return 1;
   }
@@ -595,7 +595,7 @@ static void DbTraceHandler(void *cd, const char *zSql){
   Tcl_DStringInit(&str);
   Tcl_DStringAppend(&str, pDb->zTrace, -1);
   Tcl_DStringAppendElement(&str, zSql);
-  Tcl_Eval(pDb->interp, Tcl_DStringValue(&str));
+  Tcl_EvalEx(pDb->interp, Tcl_DStringValue(&str), -1, 0);
   Tcl_DStringFree(&str);
   Tcl_ResetResult(pDb->interp);
 }
@@ -616,7 +616,7 @@ static void DbProfileHandler(void *cd, const char *zSql, sqlite_uint64 tm){
   Tcl_DStringAppend(&str, pDb->zProfile, -1);
   Tcl_DStringAppendElement(&str, zSql);
   Tcl_DStringAppendElement(&str, zTm);
-  Tcl_Eval(pDb->interp, Tcl_DStringValue(&str));
+  Tcl_EvalEx(pDb->interp, Tcl_DStringValue(&str), -1, 0);
   Tcl_DStringFree(&str);
   Tcl_ResetResult(pDb->interp);
 }
@@ -632,7 +632,7 @@ static int DbCommitHandler(void *cd){
   SqliteDb *pDb = (SqliteDb*)cd;
   int rc;
 
-  rc = Tcl_Eval(pDb->interp, pDb->zCommit);
+  rc = Tcl_EvalEx(pDb->interp, pDb->zCommit, -1, 0);
   if( rc!=TCL_OK || atoi(Tcl_GetStringResult(pDb->interp)) ){
     return 1;
   }
@@ -958,7 +958,7 @@ static int auth_callback(
 #ifdef SQLITE_USER_AUTHENTICATION
   Tcl_DStringAppendElement(&str, zArg5 ? zArg5 : "");
 #endif  
-  rc = Tcl_GlobalEval(pDb->interp, Tcl_DStringValue(&str));
+  rc = Tcl_EvalEx(pDb->interp, Tcl_DStringValue(&str), -1, TCL_EVAL_GLOBAL);
   Tcl_DStringFree(&str);
   zReply = rc==TCL_OK ? Tcl_GetStringResult(pDb->interp) : "SQLITE_DENY";
   if( strcmp(zReply,"SQLITE_OK")==0 ){
@@ -3935,7 +3935,7 @@ int TCLSH_MAIN(int argc, char **argv){
     }
   }
   if( TCLSH==2 || argc<=1 ){
-    Tcl_GlobalEval(interp, tclsh_main_loop());
+    Tcl_EvalEx(interp, tclsh_main_loop(), -1, TCL_EVAL_GLOBAL);
   }
   return 0;
 }
