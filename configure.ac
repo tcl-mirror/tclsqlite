@@ -181,7 +181,7 @@ AC_DEFINE(USE_TCL_STUBS, 1, [Use Tcl stubs])
 #AC_CHECK_FUNC(fdatasync, , AC_DEFINE(fdatasync, fsync))
 AC_CHECK_HEADERS([malloc.h])
 # Check for library functions that SQLite can optionally use.
-AC_CHECK_FUNCS([fdatasync usleep strchrnul localtime_r gmtime_r localtime_s malloc_usable_size utime flock readlink lstat rand_s pread pread64 pwrite pwrite64])
+AC_CHECK_FUNCS([fdatasync usleep strchrnul localtime_r gmtime_r localtime_s malloc_usable_size utime flock readlink lstat pread pread64 pwrite pwrite64])
 
 AC_FUNC_STRERROR_R
 
