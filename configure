@@ -8611,7 +8611,7 @@ fi
 done
 
 # Check for library functions that SQLite can optionally use.
-for ac_func in fdatasync usleep strchrnul localtime_r gmtime_r localtime_s malloc_usable_size utime flock readlink lstat rand_s pread pread64 pwrite pwrite64
+for ac_func in fdatasync usleep strchrnul localtime_r gmtime_r localtime_s malloc_usable_size utime flock readlink lstat pread pread64 pwrite pwrite64
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
