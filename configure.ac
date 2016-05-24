@@ -79,6 +79,7 @@ TEA_ADD_CFLAGS([-DSQLITE_ENABLE_DBSTAT_VTAB=1])
 TEA_ADD_CFLAGS([-DSQLITE_ENABLE_FTS3_PARENTHESIS=1])
 TEA_ADD_CFLAGS([-DSQLITE_ENABLE_FTS4=1])
 TEA_ADD_CFLAGS([-DSQLITE_ENABLE_FTS5=1])
+TEA_ADD_CFLAGS([-DSQLITE_ENABLE_COLUMN_METADATA=1])
 TEA_ADD_CFLAGS([-DSQLITE_ENABLE_JSON1=1])
 TEA_ADD_CFLAGS([-DSQLITE_3_SUFFIX_ONLY=1])
 TEA_ADD_CFLAGS([-DSQLITE_ENABLE_RTREE=1])
@@ -181,7 +182,7 @@ AC_DEFINE(USE_TCL_STUBS, 1, [Use Tcl stubs])
 #AC_CHECK_FUNC(fdatasync, , AC_DEFINE(fdatasync, fsync))
 AC_CHECK_HEADERS([malloc.h])
 # Check for library functions that SQLite can optionally use.
-AC_CHECK_FUNCS([fdatasync usleep strchrnul localtime_r gmtime_r localtime_s malloc_usable_size utime flock readlink lstat pread pread64 pwrite pwrite64])
+AC_CHECK_FUNCS([fdatasync usleep strchrnul localtime_r gmtime_r localtime_s malloc_usable_size utime flock readlink lstat pread pread64 pwrite pwrite64 rand_s])
 
 AC_FUNC_STRERROR_R
 
