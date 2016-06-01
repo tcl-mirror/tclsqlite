@@ -3316,7 +3316,10 @@ static const char *Tcl_InitStubs(Tcl_Interp *interp, const char *version, int ex
 ** The DLLEXPORT macros are required by TCL in order to work on windows.
 */
 DLLEXPORT int Sqlite3_Init(Tcl_Interp *interp){
-  int rc = Tcl_InitStubs(interp, "8.4", 0) ? TCL_OK : TCL_ERROR;
+  int rc = Tcl_InitStubs(interp, "8.4-", 0) ? TCL_OK : TCL_ERROR;
+  if( rc!=TCL_OK ){
+    rc = Tcl_InitStubs(interp, "8.4", 0) ? TCL_OK : TCL_ERROR;
+  }
   if( rc==TCL_OK ){
     Tcl_CreateObjCommand(interp, "sqlite3", (Tcl_ObjCmdProc*)DbMain, 0, 0);
 #ifndef SQLITE_3_SUFFIX_ONLY
