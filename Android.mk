@@ -31,7 +31,6 @@ LOCAL_SRC_FILES := \
 
 LOCAL_CFLAGS := $(tcl_cflags) \
 	-DSQLITE_3_SUFFIX_ONLY=1 \
-	-DSQLITE_OMIT_DEPRECATED=1 \
 	-DSQLITE_OMIT_BUILTIN_TEST=1 \
 	-DSQLITE_OMIT_LOOKASIDE=1 \
 	-DSQLITE_SECURE_DELETE=1 \
@@ -55,7 +54,7 @@ LOCAL_CFLAGS := $(tcl_cflags) \
 	-DHAVE_ISNAN=1 \
 	-DU_LIB_SUFFIX_C_NAME=_sqlite3 \
 	-DPACKAGE_NAME="\"sqlite\"" \
-	-DPACKAGE_VERSION="\"3.13.0\"" \
+	-DPACKAGE_VERSION="\"3.14.0\"" \
 	-DBUILD_sqlite=1 \
 	-Dmain=sqlite3_shell \
 	-O2

@@ -1693,7 +1693,7 @@ static void explain_data_prepare(ShellState *p, sqlite3_stmt *pSql){
       if( iOp==0 ){
         /* Do further verfication that this is explain output.  Abort if
         ** it is not */
-        static const char *explainCols[] = {
+        static const char *const explainCols[] = {
            "addr", "opcode", "p1", "p2", "p3", "p4", "p5", "comment" };
         int jj;
         for(jj=0; jj<ArraySize(explainCols); jj++){
@@ -2349,6 +2349,7 @@ static void open_db(ShellState *p, int keepAlive){
 #ifndef SQLITE_OMIT_LOAD_EXTENSION
     sqlite3_enable_load_extension(p->db, 1);
 #endif
+    sqlite3_db_config(p->db, SQLITE_DBCONFIG_ENABLE_FTS3_TOKENIZER, 1, (char *)0);
     sqlite3_create_function(p->db, "readfile", 1, SQLITE_UTF8, 0,
                             readfileFunc, 0, 0);
     sqlite3_create_function(p->db, "writefile", 2, SQLITE_UTF8, 0,
@@ -2432,7 +2433,7 @@ static int hexDigitValue(char c){
 */
 static sqlite3_int64 integerValue(const char *zArg){
   sqlite3_int64 v = 0;
-  static const struct { char *zSuffix; int iMult; } aMult[] = {
+  static const struct { char zSuffix[4]; int iMult; } aMult[] = {
     { "KiB", 1024 },
     { "MiB", 1024*1024 },
     { "GiB", 1024*1024*1024 },
@@ -2528,13 +2529,22 @@ static FILE *output_file_open(const char *zFile){
 /*
 ** A routine for handling output from sqlite3_trace().
 */
-static void sql_trace_callback(void *pArg, const char *z){
+static int sql_trace_callback(
+  unsigned mType,
+  void *pArg,
+  void *pP,
+  void *pX
+){
   FILE *f = (FILE*)pArg;
+  UNUSED_PARAMETER(mType);
+  UNUSED_PARAMETER(pP);
   if( f ){
+    const char *z = (const char*)pX;
     int i = (int)strlen(z);
     while( i>0 && z[i-1]==';' ){ i--; }
     utf8_printf(f, "%.*s;\n", i, z);
   }
+  return 0;
 }
 
 /*
@@ -2931,10 +2941,10 @@ static int db_int(ShellState *p, const char *zSql){
 /*
 ** Convert a 2-byte or 4-byte big-endian integer into a native integer
 */
-unsigned int get2byteInt(unsigned char *a){
+static unsigned int get2byteInt(unsigned char *a){
   return (a[0]<<8) + a[1];
 }
-unsigned int get4byteInt(unsigned char *a){
+static unsigned int get4byteInt(unsigned char *a){
   return (a[0]<<24) + (a[1]<<16) + (a[2]<<8) + a[3];
 }
 
@@ -4640,9 +4650,9 @@ static int do_meta_command(char *zLine, ShellState *p){
     p->traceOut = output_file_open(azArg[1]);
 #if !defined(SQLITE_OMIT_TRACE) && !defined(SQLITE_OMIT_FLOATING_POINT)
     if( p->traceOut==0 ){
-      sqlite3_trace(p->db, 0, 0);
+      sqlite3_trace_v2(p->db, 0, 0, 0);
     }else{
-      sqlite3_trace(p->db, sql_trace_callback, p->traceOut);
+      sqlite3_trace_v2(p->db, SQLITE_TRACE_STMT, sql_trace_callback,p->traceOut);
     }
 #endif
   }else
@@ -5309,6 +5319,8 @@ int SQLITE_CDECL wmain(int argc, wchar_t **wargv){
       szHeap = integerValue(zSize);
       if( szHeap>0x7fff0000 ) szHeap = 0x7fff0000;
       sqlite3_config(SQLITE_CONFIG_HEAP, malloc((int)szHeap), (int)szHeap, 64);
+#else
+      (void)cmdline_option_value(argc, argv, ++i);
 #endif
     }else if( strcmp(z,"-scratch")==0 ){
       int n, sz;
