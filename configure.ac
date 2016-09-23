@@ -6,7 +6,7 @@ dnl	to configure the system for the local environment.
 # RCS: @(#) $Id: configure.in,v 1.43 2005/07/26 19:17:05 mdejong Exp $
 
 #-----------------------------------------------------------------------
-# Sample configure.in for Tcl Extensions.  The only places you should
+# Sample configure.ac for Tcl Extensions.  The only places you should
 # need to modify this file are marked by the string __CHANGE__
 #-----------------------------------------------------------------------
 
@@ -84,7 +84,9 @@ TEA_ADD_CFLAGS([-DSQLITE_ENABLE_JSON1=1])
 TEA_ADD_CFLAGS([-DSQLITE_3_SUFFIX_ONLY=1])
 TEA_ADD_CFLAGS([-DSQLITE_ENABLE_RTREE=1])
 TEA_ADD_CFLAGS([-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT=1])
+TEA_ADD_CFLAGS([-DSQLITE_LIKE_DOESNT_MATCH_BLOBS=1])
 TEA_ADD_CFLAGS([-DSQLITE_OMIT_BUILTIN_TEST=1])
+TEA_ADD_CFLAGS([-DSQLITE_OMIT_DEPRECATED=1])
 TEA_ADD_CFLAGS([-DSQLITE_OMIT_LOOKASIDE=1])
 TEA_ADD_CFLAGS([-DSQLITE_SECURE_DELETE=1])
 TEA_ADD_CFLAGS([-DSQLITE_SOUNDEX=1])

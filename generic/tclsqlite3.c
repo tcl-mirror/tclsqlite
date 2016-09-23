@@ -614,16 +614,22 @@ static int DbProgressHandler(void *cd){
 ** This routine is called by the SQLite trace handler whenever a new
 ** block of SQL is executed.  The TCL script in pDb->zTrace is executed.
 */
-static void DbTraceHandler(void *cd, const char *zSql){
+static int DbTraceHandler(
+  unsigned type, /* One of the SQLITE_TRACE_* event types. */
+  void *cd,      /* The original context data pointer. */
+  void *pd,      /* Primary event data, depends on event type. */
+  void *xd       /* Extra event data, depends on event type. */
+){
   SqliteDb *pDb = (SqliteDb*)cd;
   Tcl_DString str;
 
   Tcl_DStringInit(&str);
   Tcl_DStringAppend(&str, pDb->zTrace, -1);
-  Tcl_DStringAppendElement(&str, zSql);
+  Tcl_DStringAppendElement(&str, (char *)xd);
   Tcl_EvalEx(pDb->interp, Tcl_DStringValue(&str), -1, 0);
   Tcl_DStringFree(&str);
   Tcl_ResetResult(pDb->interp);
+  return TCL_OK;
 }
 #endif
 
@@ -708,19 +714,26 @@ static int DbTraceV2Handler(
 ** This routine is called by the SQLite profile handler after a statement
 ** SQL has executed.  The TCL script in pDb->zProfile is evaluated.
 */
-static void DbProfileHandler(void *cd, const char *zSql, sqlite_uint64 tm){
+static int DbProfileHandler(
+  unsigned type, /* One of the SQLITE_TRACE_* event types. */
+  void *cd,      /* The original context data pointer. */
+  void *pd,      /* Primary event data, depends on event type. */
+  void *xd       /* Extra event data, depends on event type. */
+){
   SqliteDb *pDb = (SqliteDb*)cd;
   Tcl_DString str;
   char zTm[100];
+  sqlite3_stmt *pStmt = (sqlite3_stmt *)pd;  
 
-  sqlite3_snprintf(sizeof(zTm)-1, zTm, "%lld", tm);
+  sqlite3_snprintf(sizeof(zTm)-1, zTm, "%lld", (Tcl_WideInt)(size_t)xd);
   Tcl_DStringInit(&str);
   Tcl_DStringAppend(&str, pDb->zProfile, -1);
-  Tcl_DStringAppendElement(&str, zSql);
+  Tcl_DStringAppendElement(&str, sqlite3_sql(pStmt));
   Tcl_DStringAppendElement(&str, zTm);
   Tcl_EvalEx(pDb->interp, Tcl_DStringValue(&str), -1, 0);
   Tcl_DStringFree(&str);
   Tcl_ResetResult(pDb->interp);
+  return SQLITE_OK;
 }
 #endif
 
@@ -2775,9 +2788,9 @@ static int SQLITE_TCLAPI DbObjCmd(
 #if !defined(SQLITE_OMIT_TRACE) && !defined(SQLITE_OMIT_FLOATING_POINT)
       if( pDb->zProfile ){
         pDb->interp = interp;
-        sqlite3_profile(pDb->db, DbProfileHandler, pDb);
+        sqlite3_trace_v2(pDb->db, SQLITE_TRACE_PROFILE, DbProfileHandler, pDb);
       }else{
-        sqlite3_profile(pDb->db, 0, 0);
+        sqlite3_trace_v2(pDb->db, 0, 0, 0);
       }
 #endif
     }
@@ -2959,13 +2972,12 @@ static int SQLITE_TCLAPI DbObjCmd(
       }else{
         pDb->zTrace = 0;
       }
-#if !defined(SQLITE_OMIT_TRACE) && !defined(SQLITE_OMIT_FLOATING_POINT) \
-    && !defined(SQLITE_OMIT_DEPRECATED)
+#if !defined(SQLITE_OMIT_TRACE) && !defined(SQLITE_OMIT_FLOATING_POINT)
       if( pDb->zTrace ){
         pDb->interp = interp;
-        sqlite3_trace(pDb->db, DbTraceHandler, pDb);
+        sqlite3_trace_v2(pDb->db, SQLITE_TRACE_STMT, DbTraceHandler, pDb);
       }else{
-        sqlite3_trace(pDb->db, 0, 0);
+        sqlite3_trace_v2(pDb->db, 0, 0, 0);
       }
 #endif
     }
