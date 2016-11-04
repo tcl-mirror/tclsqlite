@@ -19,7 +19,7 @@ dnl	to configure the system for the local environment.
 # so you can encode the package version directly into the source files.
 #-----------------------------------------------------------------------
 
-AC_INIT([sqlite], [3.15.0])
+AC_INIT([sqlite], [3.15.1])
 
 #--------------------------------------------------------------------
 # Call TEA_INIT as the first TEA_ macro to set up initial vars.
@@ -90,6 +90,7 @@ TEA_ADD_CFLAGS([-DSQLITE_OMIT_DEPRECATED=1])
 TEA_ADD_CFLAGS([-DSQLITE_OMIT_LOOKASIDE=1])
 TEA_ADD_CFLAGS([-DSQLITE_SECURE_DELETE=1])
 TEA_ADD_CFLAGS([-DSQLITE_SOUNDEX=1])
+TEA_ADD_CFLAGS([-DSQLITE_USE_ALLOCA=1])
 TEA_ADD_CFLAGS([-DSQLITE_WIN32_NO_ANSI=1])
 TEA_ADD_CFLAGS([-DSQLITE_WIN32_GETVERSIONEX=0])
 TEA_ADD_STUB_SOURCES([])
