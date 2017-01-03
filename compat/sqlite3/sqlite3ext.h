@@ -45,7 +45,7 @@ struct sqlite3_api_routines {
   int  (*bind_value)(sqlite3_stmt*,int,const sqlite3_value*);
   int  (*busy_handler)(sqlite3*,int(*)(void*,int),void*);
   int  (*busy_timeout)(sqlite3*,int ms);
-  int  (*changes)(sqlite3*);
+  sqlite_uint64 (*changes)(sqlite3*);
   int  (*close)(sqlite3*);
   int  (*collation_needed)(sqlite3*,void*,void(*)(void*,sqlite3*,
                            int eTextRep,const char*));
@@ -139,7 +139,7 @@ struct sqlite3_api_routines {
   int  (*table_column_metadata)(sqlite3*,const char*,const char*,const char*,
                                 char const**,char const**,int*,int*,int*);
   void  (*thread_cleanup)(void);
-  int  (*total_changes)(sqlite3*);
+  sqlite_uint64  (*total_changes)(sqlite3*);
   void * (*trace)(sqlite3*,void(*xTrace)(void*,const char*),void*);
   int  (*transfer_bindings)(sqlite3_stmt*,sqlite3_stmt*);
   void * (*update_hook)(sqlite3*,void(*)(void*,int ,char const*,char const*,
