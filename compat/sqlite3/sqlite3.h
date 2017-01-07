@@ -2030,6 +2030,8 @@ SQLITE_API sqlite3_int64 sqlite3_last_insert_rowid(sqlite3*);
 ** is unpredictable and not meaningful.
 */
 SQLITE_API sqlite3_uint64 sqlite3_changes(sqlite3*);
+#define sqlite3_changes(db) ((int)(sqlite3_changes)(db))
+#define sqlite3_changes64(db) ((sqlite3_changes)(db))
 
 /*
 ** CAPI3REF: Total Number Of Rows Modified
@@ -2054,6 +2056,8 @@ SQLITE_API sqlite3_uint64 sqlite3_changes(sqlite3*);
 ** returned is unpredictable and not meaningful.
 */
 SQLITE_API sqlite3_uint64 sqlite3_total_changes(sqlite3*);
+#define sqlite3_total_changes(db) ((int)(sqlite3_total_changes)(db))
+#define sqlite3_total_changes64(db) ((sqlite3_total_changes)(db))
 
 /*
 ** CAPI3REF: Interrupt A Long-Running Query

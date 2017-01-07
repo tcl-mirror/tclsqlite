@@ -326,7 +326,10 @@ typedef int (*sqlite3_loadext_entry)(
 #define sqlite3_bind_value             sqlite3_api->bind_value
 #define sqlite3_busy_handler           sqlite3_api->busy_handler
 #define sqlite3_busy_timeout           sqlite3_api->busy_timeout
-#define sqlite3_changes                sqlite3_api->changes
+#undef sqlite3_changes
+#define sqlite3_changes                (int)sqlite3_api->changes
+#undef sqlite3_changes64
+#define sqlite3_changes64              sqlite3_api->changes
 #define sqlite3_close                  sqlite3_api->close
 #define sqlite3_collation_needed       sqlite3_api->collation_needed
 #define sqlite3_collation_needed16     sqlite3_api->collation_needed16
@@ -423,7 +426,10 @@ typedef int (*sqlite3_loadext_entry)(
 #define sqlite3_snprintf               sqlite3_api->snprintf
 #define sqlite3_step                   sqlite3_api->step
 #define sqlite3_table_column_metadata  sqlite3_api->table_column_metadata
-#define sqlite3_total_changes          sqlite3_api->total_changes
+#undef sqlite3_total_changes
+#define sqlite3_total_changes          (int)sqlite3_api->total_changes
+#undef sqlite3_total_changes64
+#define sqlite3_total_changes64        sqlite3_api->total_changes
 #define sqlite3_trace                  sqlite3_api->trace
 #define sqlite3_update_hook            sqlite3_api->update_hook
 #define sqlite3_user_data              sqlite3_api->user_data
