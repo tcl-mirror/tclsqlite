@@ -5446,7 +5446,7 @@ static int runOneSqlLine(ShellState *p, char *zSql, FILE *in, int startline){
     return 1;
   }else if( p->countChanges ){
     raw_printf(p->out, "changes: %3d   total_changes: %d\n",
-            sqlite3_changes(p->db), sqlite3_total_changes(p->db));
+            (int)sqlite3_changes(p->db), (int)sqlite3_total_changes(p->db));
   }
   return 0;
 }

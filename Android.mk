@@ -8,7 +8,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-tcl_path := $(LOCAL_PATH)/../..
+tcl_path := $(LOCAL_PATH)/../../tcl
 
 include $(tcl_path)/tcl-config.mk
 
