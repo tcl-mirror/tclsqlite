@@ -73,6 +73,13 @@
 # define GETPID (int)GetCurrentProcessId
 #endif
 
+#ifndef CONST
+# define CONST const
+#endif
+#ifndef EXPORT
+# define EXPORT DLLEXPORT
+#endif
+
 /*
  * If we are not sure the platform is 32-bit, always use sqlite3_????64()
  * in stead of sqlite3_????() for certain functions, in order to prevent overflow.
@@ -85,6 +92,15 @@
 # define sqlite3_bind_text(pStmt, i, zData, nData, xDel) sqlite3_bind_text64(pStmt, i, zData, nData, xDel, SQLITE_UTF8)
 # define sqlite3_result_text(pCtx, z, n, xDel) sqlite3_result_text64(pCtx, z, n, xDel, SQLITE_UTF8)
 #endif
+
+/*
+ * Windows needs to know which symbols to export.  Unix does not.
+ * BUILD_sqlite should be undefined for Unix.
+ */
+#ifdef BUILD_sqlite
+#undef TCL_STORAGE_CLASS
+#define TCL_STORAGE_CLASS DLLEXPORT
+#endif /* BUILD_sqlite */
 
 #define NUM_PREPARED_STMTS 10
 #define MAX_PREPARED_STMTS 100
@@ -290,7 +306,7 @@ static int SQLITE_TCLAPI incrblobInput(
 */
 static int SQLITE_TCLAPI incrblobOutput(
   ClientData instanceData,
-  const char *buf,
+  CONST char *buf,
   int toWrite,
   int *errorCodePtr
 ){
@@ -667,7 +683,7 @@ static int DbTraceV2Handler(
     }
     case SQLITE_TRACE_PROFILE: {
       sqlite3_stmt *pStmt = (sqlite3_stmt *)pd;
-      size_t ns = (size_t)xd;
+      sqlite3_int64 ns = (sqlite3_int64)xd;
 
       pCmd = Tcl_NewStringObj(pDb->zTraceV2, -1);
       Tcl_IncrRefCount(pCmd);
@@ -2383,13 +2399,11 @@ static int SQLITE_TCLAPI DbObjCmd(
       }
       for(i=0; i<nCol; i++){
         /* check for null data, if so, bind as null */
-        size_t len = strlen30(azCol[i]);
-        if( (nNull>0 && strcmp(azCol[i], zNull)==0)
-          || len==0
+        if( (azCol[i][0]==0) || (nNull>0 && strcmp(azCol[i], zNull)==0)
         ){
           sqlite3_bind_null(pStmt, i+1);
         }else{
-          sqlite3_bind_text(pStmt, i+1, azCol[i], len, SQLITE_STATIC);
+          sqlite3_bind_text(pStmt, i+1, azCol[i], strlen30(azCol[i]), SQLITE_STATIC);
         }
       }
       sqlite3_step(pStmt);
@@ -2572,7 +2586,7 @@ static int SQLITE_TCLAPI DbObjCmd(
       int n = strlen30(z);
       if( n>2 && strncmp(z, "-argcount",n)==0 ){
         if( i==(objc-2) ){
-          Tcl_AppendResult(interp, "option requires an argument: ", z, (char*)0);
+          Tcl_AppendResult(interp, "option requires an argument: ", z,(char*)0);
           return TCL_ERROR;
         }
         if( Tcl_GetIntFromObj(interp, objv[i+1], &nArg) ) return TCL_ERROR;
@@ -3242,7 +3256,7 @@ static int SQLITE_TCLAPI DbObjCmd(
           pObj = Tcl_NewStringObj((char*)sqlite3_value_text(pValue), -1);
           Tcl_SetObjResult(interp, pObj);
         }else{
-          Tcl_AppendResult(interp, sqlite3_errmsg(pDb->db), 0);
+          Tcl_AppendResult(interp, sqlite3_errmsg(pDb->db), (char*)0);
           return TCL_ERROR;
         }
       }
@@ -3520,9 +3534,9 @@ static const char *Tcl_InitStubs(Tcl_Interp *interp, const char *version, int ex
 ** used to open a new SQLite database.  See the DbMain() routine above
 ** for additional information.
 **
-** The DLLEXPORT macros are required by TCL in order to work on windows.
+** The EXTERN macros are required by TCL in order to work on windows.
 */
-DLLEXPORT int Sqlite3_Init(Tcl_Interp *interp){
+EXTERN int Sqlite3_Init(Tcl_Interp *interp){
   int rc = Tcl_InitStubs(interp, "8.4-", 0) ? TCL_OK : TCL_ERROR;
   if( rc!=TCL_OK ){
     rc = Tcl_InitStubs(interp, "8.4", 0) ? TCL_OK : TCL_ERROR;
@@ -3539,16 +3553,16 @@ DLLEXPORT int Sqlite3_Init(Tcl_Interp *interp){
   }
   return rc;
 }
-DLLEXPORT int Tclsqlite3_Init(Tcl_Interp *interp){ return Sqlite3_Init(interp); }
-DLLEXPORT int Sqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
-DLLEXPORT int Tclsqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
+EXTERN int Tclsqlite3_Init(Tcl_Interp *interp){ return Sqlite3_Init(interp); }
+EXTERN int Sqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
+EXTERN int Tclsqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
 
 /* Because it accesses the file-system and uses persistent state, SQLite
 ** is not considered appropriate for safe interpreters.  Hence, we cause
 ** the _SafeInit() interfaces return TCL_ERROR.
 */
-DLLEXPORT int Sqlite3_SafeInit(Tcl_Interp *interp){ return TCL_ERROR; }
-DLLEXPORT int Sqlite3_SafeUnload(Tcl_Interp *interp, int flags){return TCL_ERROR;}
+EXTERN int Sqlite3_SafeInit(Tcl_Interp *interp){ return TCL_ERROR; }
+EXTERN int Sqlite3_SafeUnload(Tcl_Interp *interp, int flags){return TCL_ERROR;}
 
 
 
@@ -3876,7 +3890,7 @@ static int SQLITE_TCLAPI md5_cmd(
     return TCL_ERROR;
   }
   MD5Init(&ctx);
-  MD5Update(&ctx, (unsigned char*)argv[1], (unsigned)strlen30(argv[1]));
+  MD5Update(&ctx, (unsigned char*)argv[1], (unsigned)strlen(argv[1]));
   MD5Final(digest, &ctx);
   converter = (void(*)(unsigned char*,char*))cd;
   converter(digest, zBuf);
@@ -3958,7 +3972,7 @@ static void md5step(sqlite3_context *context, int argc, sqlite3_value **argv){
   for(i=0; i<argc; i++){
     const char *zData = (char*)sqlite3_value_text(argv[i]);
     if( zData ){
-      MD5Update(p, (unsigned char*)zData, (int)strlen30(zData));
+      MD5Update(p, (unsigned char*)zData, (unsigned)strlen(zData));
     }
   }
 }
@@ -3969,7 +3983,7 @@ static void md5finalize(sqlite3_context *context){
   p = sqlite3_aggregate_context(context, sizeof(*p));
   MD5Final(digest,p);
   MD5DigestToBase16(digest, zBuf);
-  sqlite3_result_text(context, zBuf, strlen30(zBuf), SQLITE_TRANSIENT);
+  sqlite3_result_text(context, zBuf, strlen(zBuf), SQLITE_TRANSIENT);
 }
 int Md5_Register(
   sqlite3 *db,
@@ -4027,7 +4041,7 @@ static int SQLITE_TCLAPI init_all_cmd(
   ClientData cd,
   Tcl_Interp *interp,
   int objc,
-  Tcl_Obj *const objv[]
+  Tcl_Obj *CONST objv[]
 ){
 
   Tcl_Interp *slave;
@@ -4057,7 +4071,7 @@ static int SQLITE_TCLAPI db_use_legacy_prepare_cmd(
   ClientData cd,
   Tcl_Interp *interp,
   int objc,
-  Tcl_Obj *const objv[]
+  Tcl_Obj *CONST objv[]
 ){
   Tcl_CmdInfo cmdInfo;
   SqliteDb *pDb;
@@ -4094,7 +4108,7 @@ static int SQLITE_TCLAPI db_last_stmt_ptr(
   ClientData cd,
   Tcl_Interp *interp,
   int objc,
-  Tcl_Obj *const objv[]
+  Tcl_Obj *CONST objv[]
 ){
   extern int sqlite3TestMakePointerStr(Tcl_Interp*, char*, void*);
   Tcl_CmdInfo cmdInfo;
