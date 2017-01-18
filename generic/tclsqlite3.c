@@ -76,8 +76,8 @@
 #ifndef CONST
 # define CONST const
 #endif
-#ifndef EXPORT
-# define EXPORT DLLEXPORT
+#ifndef EXTERN
+# define EXTERN DLLEXPORT
 #endif
 
 /*
