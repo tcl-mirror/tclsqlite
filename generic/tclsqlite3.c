@@ -683,7 +683,7 @@ static int DbTraceV2Handler(
     }
     case SQLITE_TRACE_PROFILE: {
       sqlite3_stmt *pStmt = (sqlite3_stmt *)pd;
-      sqlite3_int64 ns = (sqlite3_int64)xd;
+      size_t ns = (size_t)xd;
 
       pCmd = Tcl_NewStringObj(pDb->zTraceV2, -1);
       Tcl_IncrRefCount(pCmd);
@@ -2385,14 +2385,14 @@ static int SQLITE_TCLAPI DbObjCmd(
       }
       if( i+1!=nCol ){
         char *zErr;
-        int nErr = strlen30(zFile) + 200;
-        zErr = malloc(nErr);
+        size_t nErr = strlen(zFile) + 200;
+        zErr = sqlite3_malloc(nErr);
         if( zErr ){
           sqlite3_snprintf(nErr, zErr,
              "Error: %s line %d: expected %d columns of data but found %d",
              zFile, lineno, nCol, i+1);
           Tcl_AppendResult(interp, zErr, (char*)0);
-          free(zErr);
+          sqlite3_free(zErr);
         }
         zCommit = "ROLLBACK";
         break;
@@ -2403,7 +2403,7 @@ static int SQLITE_TCLAPI DbObjCmd(
         ){
           sqlite3_bind_null(pStmt, i+1);
         }else{
-          sqlite3_bind_text(pStmt, i+1, azCol[i], strlen30(azCol[i]), SQLITE_STATIC);
+          sqlite3_bind_text(pStmt, i+1, azCol[i], strlen(azCol[i]), SQLITE_STATIC);
         }
       }
       sqlite3_step(pStmt);
