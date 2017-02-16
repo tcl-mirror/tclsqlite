@@ -2385,7 +2385,7 @@ static int SQLITE_TCLAPI DbObjCmd(
       }
       if( i+1!=nCol ){
         char *zErr;
-        size_t nErr = strlen(zFile) + 200;
+        int nErr = strlen30(zFile) + 200;
         zErr = sqlite3_malloc(nErr);
         if( zErr ){
           sqlite3_snprintf(nErr, zErr,
@@ -3537,7 +3537,7 @@ static const char *Tcl_InitStubs(Tcl_Interp *interp, const char *version, int ex
 ** The EXTERN macros are required by TCL in order to work on windows.
 */
 EXTERN int Sqlite3_Init(Tcl_Interp *interp){
-  int rc = Tcl_InitStubs(interp, "8.4-", 0) ? TCL_OK : TCL_ERROR;
+  int rc = Tcl_InitStubs(interp, "8.5-", 0) ? TCL_OK : TCL_ERROR;
   if( rc!=TCL_OK ){
     rc = Tcl_InitStubs(interp, "8.4", 0) ? TCL_OK : TCL_ERROR;
   }
