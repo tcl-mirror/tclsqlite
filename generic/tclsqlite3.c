@@ -3145,7 +3145,7 @@ static int SQLITE_TCLAPI DbObjCmd(
   */
   case DB_PREUPDATE: {
 #ifndef SQLITE_ENABLE_PREUPDATE_HOOK
-    Tcl_AppendResult(interp, "preupdate_hook was omitted at compile-time",
+    Tcl_AppendResult(interp, "preupdate_hook was omitted at compile-time", 
                      (char*)0);
     rc = TCL_ERROR;
 #else
@@ -3410,10 +3410,6 @@ static int SQLITE_TCLAPI DbMain(
   }
   zErrMsg = 0;
   p = (SqliteDb*)Tcl_Alloc( sizeof(*p) );
-  if( p==0 ){
-    Tcl_SetResult(interp, (char *)"malloc failed", TCL_STATIC);
-    return TCL_ERROR;
-  }
   memset(p, 0, sizeof(*p));
   zFile = Tcl_GetStringFromObj(objv[2], 0);
   zFile = Tcl_TranslateFileName(interp, zFile, &translatedFilename);
