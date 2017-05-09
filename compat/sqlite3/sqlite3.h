@@ -121,8 +121,8 @@ extern "C" {
 ** [sqlite3_libversion_number()], [sqlite3_sourceid()],
 ** [sqlite_version()] and [sqlite_source_id()].
 */
-#define SQLITE_VERSION        "3.18.0"
-#define SQLITE_VERSION_NUMBER 3018000
+#define SQLITE_VERSION        "3.19.0"
+#define SQLITE_VERSION_NUMBER 3019000
 #define SQLITE_SOURCE_ID      "2017-03-28 18:48:43 424a0d380332858ee55bdebc4af3789f74e70a2b3ba1cf29d84b9b4bcf3e2e37"
 
 /*
@@ -857,7 +857,7 @@ struct sqlite3_io_methods {
 ** opcode allows these two values (10 retries and 25 milliseconds of delay)
 ** to be adjusted.  The values are changed for all database connections
 ** within the same process.  The argument is a pointer to an array of two
-** integers where the first integer i the new retry count and the second
+** integers where the first integer is the new retry count and the second
 ** integer is the delay.  If either integer is negative, then the setting
 ** is not changed but instead the prior value of that setting is written
 ** into the array entry, allowing the current retry settings to be
@@ -2120,9 +2120,6 @@ SQLITE_API sqlite3_uint64 sqlite3_total_changes(sqlite3*);
 ** ^A call to sqlite3_interrupt(D) that occurs when there are no running
 ** SQL statements is a no-op and has no effect on SQL statements
 ** that are started after the sqlite3_interrupt() call returns.
-**
-** If the database connection closes while [sqlite3_interrupt()]
-** is running then bad things will likely happen.
 */
 SQLITE_API void sqlite3_interrupt(sqlite3*);
 
@@ -3614,7 +3611,7 @@ SQLITE_API int sqlite3_stmt_busy(sqlite3_stmt*);
 ** The [sqlite3_value_blob | sqlite3_value_type()] family of
 ** interfaces require protected sqlite3_value objects.
 */
-typedef struct Mem sqlite3_value;
+typedef struct sqlite3_value sqlite3_value;
 
 /*
 ** CAPI3REF: SQL Function Context Object
@@ -4481,7 +4478,7 @@ SQLITE_API int sqlite3_create_function_v2(
 ** the use of these functions.  To encourage programmers to avoid
 ** these functions, we will not explain what they do.
 */
-#if 0
+#ifndef SQLITE_OMIT_DEPRECATED
 SQLITE_API SQLITE_DEPRECATED int sqlite3_aggregate_count(sqlite3_context*);
 SQLITE_API SQLITE_DEPRECATED int sqlite3_expired(sqlite3_stmt*);
 SQLITE_API SQLITE_DEPRECATED int sqlite3_transfer_bindings(sqlite3_stmt*, sqlite3_stmt*);
