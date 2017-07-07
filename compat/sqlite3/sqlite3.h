@@ -121,8 +121,8 @@ extern "C" {
 ** [sqlite3_libversion_number()], [sqlite3_sourceid()],
 ** [sqlite_version()] and [sqlite_source_id()].
 */
-#define SQLITE_VERSION        "3.19.4"
-#define SQLITE_VERSION_NUMBER 3019004
+#define SQLITE_VERSION        "3.19.3"
+#define SQLITE_VERSION_NUMBER 3019003
 #define SQLITE_SOURCE_ID      "2017-06-08 14:26:16 0ee482a1e0eae22e08edc8978c9733a96603d4509645f348ebf55b579e89636b"
 
 /*
@@ -2007,6 +2007,17 @@ struct sqlite3_mem_methods {
 ** have been disabled - 0 if they are not disabled, 1 if they are.
 ** </dd>
 **
+** <dt>SQLITE_DBCONFIG_ENABLE_QPSG</dt>
+** <dd>The SQLITE_DBCONFIG_ENABLE_QPSG option activates or deactivates
+** the [query planner stability guarantee] (QPSG).  When the QPSG is active,
+** a single SQL query statement will always use the same algorithm regardless
+** of values of [bound parameters].  The QPSG disables some query optimizations
+** that look at the values of bound parameters, which can make some queries
+** slower.  But the QPSG has the advantage of more predictable behavior.  With
+** the QPSG active, SQLite will always use the same query plan in the field as
+** was used during testing in the lab.
+** </dd>
+**
 ** </dl>
 */
 #define SQLITE_DBCONFIG_MAINDBNAME            1000 /* const char* */
@@ -2016,6 +2027,7 @@ struct sqlite3_mem_methods {
 #define SQLITE_DBCONFIG_ENABLE_FTS3_TOKENIZER 1004 /* int int* */
 #define SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION 1005 /* int int* */
 #define SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE      1006 /* int int* */
+#define SQLITE_DBCONFIG_ENABLE_QPSG           1007 /* int int* */
 
 
 /*
@@ -3468,6 +3480,24 @@ SQLITE_API int sqlite3_limit(sqlite3*, int id, int newVal);
 #define SQLITE_LIMIT_TRIGGER_DEPTH            10
 #define SQLITE_LIMIT_WORKER_THREADS           11
 
+/*
+** CAPI3REF: Prepare Flags
+** KEYWORDS:
+**
+** These constants define various flags that can be passed into
+** the [sqlite3_prepare_v3()] interface.
+**
+** <dl>
+** [[SQLITE_PREPARE_PERSISTENT]] ^(<dt>SQLITE_PREPARE_PERSISTENT</dt>
+** <dd>The SQLITE_PREPARE_PERSISTENT flag causes [sqlite3_prepare_v3()]
+** to optimize the resulting prepared statement to be retained for a 
+** relatively long amount of time.)^  ^Without this flag,
+** [sqlite3_prepare_v3()] assumes that the prepared statement will be used
+** just once or at most a few times and then destroyed using
+** [sqlite3_finalize()] relatively soon.
+** </dl>
+*/
+#define SQLITE_PREPARE_PERSISTENT              0x01
 
 /*
 ** CAPI3REF: Compiling An SQL Statement
@@ -3548,6 +3578,12 @@ SQLITE_API int sqlite3_limit(sqlite3*, int id, int newVal);
 ** or [GLOB] operator or if the parameter is compared to an indexed column
 ** and the [SQLITE_ENABLE_STAT3] compile-time option is enabled.
 ** </li>
+**
+** <p>^sqlite3_prepare_v3() differs from sqlite3_prepare_v2() only in having
+** the extra prepFlags parameter, which is a bit array consisting of zero or
+** more of the [SQLITE_PREPARE_PERSISTENT|SQLITE_PREPARE_*] flags.  ^The
+** sqlite3_prepare_v2() interface works exactly the same as
+** sqlite3_prepare_v3() with a zero prepFlags parameter.
 ** </ol>
 */
 SQLITE_API int sqlite3_prepare(
@@ -3564,6 +3600,14 @@ SQLITE_API int sqlite3_prepare_v2(
   sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
   const char **pzTail     /* OUT: Pointer to unused portion of zSql */
 );
+SQLITE_API int sqlite3_prepare_v3(
+  sqlite3 *db,            /* Database handle */
+  const char *zSql,       /* SQL statement, UTF-8 encoded */
+  int nByte,              /* Maximum length of zSql in bytes. */
+  unsigned int prepFlags, /* Zero or more SQLITE_PREPARE_ flags */
+  sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
+  const char **pzTail     /* OUT: Pointer to unused portion of zSql */
+);
 SQLITE_API int sqlite3_prepare16(
   sqlite3 *db,            /* Database handle */
   const void *zSql,       /* SQL statement, UTF-16 encoded */
@@ -3575,6 +3619,14 @@ SQLITE_API int sqlite3_prepare16_v2(
   sqlite3 *db,            /* Database handle */
   const void *zSql,       /* SQL statement, UTF-16 encoded */
   int nByte,              /* Maximum length of zSql in bytes. */
+  sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
+  const void **pzTail     /* OUT: Pointer to unused portion of zSql */
+);
+SQLITE_API int sqlite3_prepare16_v3(
+  sqlite3 *db,            /* Database handle */
+  const void *zSql,       /* SQL statement, UTF-16 encoded */
+  int nByte,              /* Maximum length of zSql in bytes. */
+  unsigned int prepFalgs, /* Zero or more SQLITE_PREPARE_ flags */
   sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
   const void **pzTail     /* OUT: Pointer to unused portion of zSql */
 );
