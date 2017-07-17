@@ -123,7 +123,7 @@ extern "C" {
 */
 #define SQLITE_VERSION        "3.20.0"
 #define SQLITE_VERSION_NUMBER 3020000
-#define SQLITE_SOURCE_ID      "2017-07-14 04:16:03 d8cd0434f3451e27aefe38a1a9efdc4dfded2ea33baf25d82814c89264f3afff"
+#define SQLITE_SOURCE_ID      "2017-07-15 20:44:33 b64d64c84484162d1822430036ba0483365a39ef4cf82cd6a7b9436d9e9f50c8"
 
 /*
 ** CAPI3REF: Run-Time Library Version Numbers
@@ -2008,10 +2008,10 @@ struct sqlite3_mem_methods {
 ** </dd>
 **
 ** <dt>SQLITE_DBCONFIG_ENABLE_QPSG</dt>
-** <dd>The SQLITE_DBCONFIG_ENABLE_QPSG option activates or deactivates
+** <dd>^(The SQLITE_DBCONFIG_ENABLE_QPSG option activates or deactivates
 ** the [query planner stability guarantee] (QPSG).  When the QPSG is active,
 ** a single SQL query statement will always use the same algorithm regardless
-** of values of [bound parameters].  The QPSG disables some query optimizations
+** of values of [bound parameters].)^ The QPSG disables some query optimizations
 ** that look at the values of bound parameters, which can make some queries
 ** slower.  But the QPSG has the advantage of more predictable behavior.  With
 ** the QPSG active, SQLite will always use the same query plan in the field as
@@ -3494,7 +3494,7 @@ SQLITE_API int sqlite3_limit(sqlite3*, int id, int newVal);
 ** [[SQLITE_PREPARE_PERSISTENT]] ^(<dt>SQLITE_PREPARE_PERSISTENT</dt>
 ** <dd>The SQLITE_PREPARE_PERSISTENT flag is a hint to the query planner
 ** that the prepared statement will be retained for a long time and
-** probably reused many times. ^Without this flag, [sqlite3_prepare_v3()]
+** probably reused many times.)^ ^Without this flag, [sqlite3_prepare_v3()]
 ** and [sqlite3_prepare16_v3()] assume that the prepared statement will 
 ** be used just once or at most a few times and then destroyed using
 ** [sqlite3_finalize()] relatively soon. The current implementation acts
@@ -4739,7 +4739,7 @@ SQLITE_API SQLITE_DEPRECATED int sqlite3_memory_alarm(void(*)(void*,sqlite3_int6
 **
 ** <b>Details:</b>
 **
-** This routine extract type, size, and content information from
+** These routines extract type, size, and content information from
 ** [protected sqlite3_value] objects.  Protected sqlite3_value objects
 ** are used to pass parameter information into implementation of
 ** [application-defined SQL functions] and [virtual tables].
