@@ -2648,6 +2648,7 @@ static int shell_callback(
   int i;
   ShellState *p = (ShellState*)pArg;
 
+  if( azArg==0 ) return 0;
   switch( p->cMode ){
     case MODE_Line: {
       int w = 5;
@@ -2998,6 +2999,7 @@ static int captureOutputCallback(void *pArg, int nArg, char **azArg, char **az){
   ShellText *p = (ShellText*)pArg;
   int i;
   UNUSED_PARAMETER(az);
+  if( azArg==0 ) return 0;
   if( p->n ) appendText(p, "|", 0);
   for(i=0; i<nArg; i++){
     if( i ) appendText(p, ",", 0);
@@ -3879,7 +3881,7 @@ static int dump_callback(void *pArg, int nArg, char **azArg, char **azNotUsed){
   ShellState *p = (ShellState *)pArg;
 
   UNUSED_PARAMETER(azNotUsed);
-  if( nArg!=3 ) return 1;
+  if( nArg!=3 || azArg==0 ) return 0;
   zTable = azArg[0];
   zType = azArg[1];
   zSql = azArg[2];
