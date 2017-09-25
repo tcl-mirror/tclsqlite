@@ -264,7 +264,7 @@ static int SQLITE_TCLAPI incrblobClose(
   Tcl_Free((char *)p);
 
   if( rc!=SQLITE_OK ){
-    Tcl_SetResult(interp, (char *)sqlite3_errmsg(db), TCL_VOLATILE);
+    Tcl_AppendResult(interp, sqlite3_errmsg(db), (char*)0);
     return TCL_ERROR;
   }
   return TCL_OK;
@@ -420,7 +420,7 @@ static int createIncrblobChannel(
 
   rc = sqlite3_blob_open(db, zDb, zTable, zColumn, iRow, !isReadonly, &pBlob);
   if( rc!=SQLITE_OK ){
-    Tcl_SetResult(interp, (char *)sqlite3_errmsg(pDb->db), TCL_VOLATILE);
+    Tcl_AppendResult(interp, sqlite3_errmsg(pDb->db), (char*)0);
     return TCL_ERROR;
   }
 
@@ -441,7 +441,7 @@ static int createIncrblobChannel(
   pDb->pIncrblob = p;
   p->pDb = pDb;
 
-  Tcl_SetResult(interp, (char *)Tcl_GetChannelName(p->channel), TCL_VOLATILE);
+  Tcl_AppendResult(interp, Tcl_GetChannelName(p->channel), (char*)0);
   return TCL_OK;
 }
 #else  /* else clause for "#ifndef SQLITE_OMIT_INCRBLOB" */
@@ -740,7 +740,7 @@ static int DbProfileHandler(
   SqliteDb *pDb = (SqliteDb*)cd;
   Tcl_DString str;
   char zTm[100];
-  sqlite3_stmt *pStmt = (sqlite3_stmt *)pd;  
+  sqlite3_stmt *pStmt = (sqlite3_stmt *)pd;
 
   sqlite3_snprintf(sizeof(zTm)-1, zTm, "%lld", (Tcl_WideInt)(size_t)xd);
   Tcl_DStringInit(&str);
@@ -851,7 +851,7 @@ static void DbPreUpdateHandler(
 ){
   SqliteDb *pDb = (SqliteDb *)p;
   Tcl_Obj *pCmd;
-  static const char *azStr[] = {"DELETE", "INSERT", "UPDATE"};
+  static const char azStr[][8] = {"DELETE", "INSERT", "UPDATE"};
 
   assert( (SQLITE_DELETE-1)/9 == 0 );
   assert( (SQLITE_INSERT-1)/9 == 1 );
@@ -881,7 +881,7 @@ static void DbUpdateHandler(
 ){
   SqliteDb *pDb = (SqliteDb *)p;
   Tcl_Obj *pCmd;
-  static const char *azStr[] = {"DELETE", "INSERT", "UPDATE"};
+  static const char azStr[][8] = {"DELETE", "INSERT", "UPDATE"};
 
   assert( (SQLITE_DELETE-1)/9 == 0 );
   assert( (SQLITE_INSERT-1)/9 == 1 );
@@ -1891,7 +1891,7 @@ static int SQLITE_TCLAPI DbObjCmd(
   SqliteDb *pDb = (SqliteDb*)cd;
   int choice;
   int rc = TCL_OK;
-  static const char *DB_strs[] = {
+  static const char *const DB_strs[] = {
     "authorizer",         "backup",            "busy",
     "cache",              "changes",           "close",
     "collate",            "collation_needed",  "commit_hook",
@@ -2180,7 +2180,7 @@ static int SQLITE_TCLAPI DbObjCmd(
     memcpy(pCollate->zScript, zScript, nScript+1);
     if( sqlite3_create_collation_v2(pDb->db, zName, SQLITE_UTF8,
         pCollate, tclSqlCollate, 0) ){
-      Tcl_SetResult(interp, (char *)sqlite3_errmsg(pDb->db), TCL_VOLATILE);
+      Tcl_AppendResult(interp, sqlite3_errmsg(pDb->db), (char*)0);
       return TCL_ERROR;
     }
     break;
@@ -2427,7 +2427,7 @@ static int SQLITE_TCLAPI DbObjCmd(
         ){
           sqlite3_bind_null(pStmt, i+1);
         }else{
-          sqlite3_bind_text(pStmt, i+1, azCol[i], strlen(azCol[i]), SQLITE_STATIC);
+          sqlite3_bind_text(pStmt, i+1, azCol[i], strlen30(azCol[i]), SQLITE_STATIC);
         }
       }
       sqlite3_step(pStmt);
@@ -2659,7 +2659,7 @@ static int SQLITE_TCLAPI DbObjCmd(
         pFunc, tclSqlFunc, 0, 0, 0);
     if( rc!=SQLITE_OK ){
       rc = TCL_ERROR;
-      Tcl_SetResult(interp, (char *)sqlite3_errmsg(pDb->db), TCL_VOLATILE);
+      Tcl_AppendResult(interp, (char *)sqlite3_errmsg(pDb->db), (char*)0);
     }
     break;
   }
@@ -3057,7 +3057,7 @@ static int SQLITE_TCLAPI DbObjCmd(
       int len;
       Tcl_WideInt wMask = 0;
       if( objc==4 ){
-        static const char *TTYPE_strs[] = {
+        static const char *const TTYPE_strs[] = {
           "statement", "profile", "row", "close", 0
         };
         enum TTYPE_enum {
@@ -3140,7 +3140,7 @@ static int SQLITE_TCLAPI DbObjCmd(
     }
 
     if( pDb->nTransaction==0 && objc==4 ){
-      static const char *TTYPE_strs[] = {
+      static const char *const TTYPE_strs[] = {
         "deferred",   "exclusive",  "immediate", 0
       };
       enum TTYPE_enum {
@@ -3232,7 +3232,7 @@ static int SQLITE_TCLAPI DbObjCmd(
                      (char*)0);
     rc = TCL_ERROR;
 #else
-    static const char *azSub[] = {"count", "depth", "hook", "new", "old", 0};
+    static const char *const azSub[] = {"count", "depth", "hook", "new", "old", 0};
     enum DbPreupdateSubCmd {
       PRE_COUNT, PRE_DEPTH, PRE_HOOK, PRE_NEW, PRE_OLD
     };
@@ -3334,7 +3334,7 @@ static int SQLITE_TCLAPI DbObjCmd(
   ** Return the version string for this database.
   */
   case DB_VERSION: {
-    Tcl_SetResult(interp, (char *)sqlite3_libversion(), TCL_STATIC);
+    Tcl_AppendResult(interp, sqlite3_libversion(), (char*)0);
     break;
   }
 
@@ -3513,7 +3513,7 @@ static int SQLITE_TCLAPI DbMain(
   }
 #endif
   if( p->db==0 ){
-    Tcl_SetResult(interp, zErrMsg, TCL_VOLATILE);
+    Tcl_AppendResult(interp, zErrMsg, (char*)0);
     Tcl_Free((char*)p);
     sqlite3_free(zErrMsg);
     return TCL_ERROR;
@@ -3945,26 +3945,37 @@ static int SQLITE_TCLAPI md5file_cmd(
   const char **argv
 ){
   Tcl_Channel in;
+  int ofst;
+  int amt;
   MD5Context ctx;
   void (*converter)(unsigned char*, char*);
   unsigned char digest[16];
   char zBuf[10240];
 
-  if( argc!=2 ){
+  if( argc!=2 && argc!=4 ){
     Tcl_AppendResult(interp,"wrong # args: should be \"", argv[0],
-        " FILENAME\"", (char*)0);
+        " FILENAME [OFFSET AMT]\"", (char*)0);
     return TCL_ERROR;
+  }
+  if( argc==4 ){
+    ofst = atoi(argv[2]);
+    amt = atoi(argv[3]);
+  }else{
+    ofst = 0;
+    amt = 2147483647;
   }
   in = Tcl_OpenFileChannel(interp,argv[1],"rb",0666);
   if( in==0 ){
     return TCL_ERROR;
   }
+  Tcl_Seek(in, ofst, SEEK_SET);
   MD5Init(&ctx);
-  for(;;){
+  while( amt>0 ){
     int n;
-    n = (int)Tcl_Read(in, zBuf, sizeof(zBuf));
+    n = (int)Tcl_Read(in, zBuf, sizeof(zBuf)<=amt ? sizeof(zBuf) : amt);
     if( n<=0 ) break;
     MD5Update(&ctx, (unsigned char*)zBuf, (unsigned)n);
+    amt -= n;
   }
   Tcl_Close(interp, in);
   MD5Final(digest, &ctx);
@@ -4167,7 +4178,7 @@ static int SQLITE_TCLAPI db_last_stmt_ptr(
   if( sqlite3TestMakePointerStr(interp, zBuf, pStmt) ){
     return TCL_ERROR;
   }
-  Tcl_SetResult(interp, zBuf, TCL_VOLATILE);
+  Tcl_AppendResult(interp, zBuf, (char*)0);
 
   return TCL_OK;
 }
