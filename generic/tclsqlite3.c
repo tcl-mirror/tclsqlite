@@ -2094,7 +2094,7 @@ static int SQLITE_TCLAPI DbObjCmd(
       Tcl_WrongNumArgs(interp, 1, objv, "cache option ?arg?");
       return TCL_ERROR;
     }
-    subCmd = Tcl_GetStringFromObj( objv[2], 0 );
+    subCmd = Tcl_GetStringFromObj(objv[2], NULL);
     if( *subCmd=='f' && strcmp(subCmd,"flush")==0 ){
       if( objc!=3 ){
         Tcl_WrongNumArgs(interp, 2, objv, "flush");
@@ -2109,7 +2109,7 @@ static int SQLITE_TCLAPI DbObjCmd(
       }else{
         if( TCL_ERROR==Tcl_GetIntFromObj(interp, objv[3], &n) ){
           Tcl_AppendResult( interp, "cannot convert \"",
-               Tcl_GetStringFromObj(objv[3],0), "\" to integer", (char*)0);
+               Tcl_GetStringFromObj(objv[3], NULL), "\" to integer", (char*)0);
           return TCL_ERROR;
         }else{
           if( n<0 ){
@@ -2123,7 +2123,7 @@ static int SQLITE_TCLAPI DbObjCmd(
       }
     }else{
       Tcl_AppendResult( interp, "bad option \"",
-          Tcl_GetStringFromObj(objv[2],0), "\": must be flush or size",
+          Tcl_GetStringFromObj(objv[2], NULL), "\": must be flush or size",
           (char*)0);
       return TCL_ERROR;
     }
@@ -2152,7 +2152,7 @@ static int SQLITE_TCLAPI DbObjCmd(
   ** Shutdown the database
   */
   case DB_CLOSE: {
-    Tcl_DeleteCommand(interp, Tcl_GetStringFromObj(objv[0], 0));
+    Tcl_DeleteCommand(interp, Tcl_GetStringFromObj(objv[0], NULL));
     break;
   }
 
@@ -2171,7 +2171,7 @@ static int SQLITE_TCLAPI DbObjCmd(
       Tcl_WrongNumArgs(interp, 2, objv, "NAME SCRIPT");
       return TCL_ERROR;
     }
-    zName = Tcl_GetStringFromObj(objv[2], 0);
+    zName = Tcl_GetStringFromObj(objv[2], NULL);
     zScript = Tcl_GetStringFromObj(objv[3], &nScript);
     pCollate = (SqlCollate*)Tcl_Alloc( sizeof(*pCollate) + nScript + 1 );
     if( pCollate==0 ) return TCL_ERROR;
@@ -2260,7 +2260,7 @@ static int SQLITE_TCLAPI DbObjCmd(
       Tcl_WrongNumArgs(interp, 2, objv, "SQL");
       return TCL_ERROR;
     }
-    isComplete = sqlite3_complete( Tcl_GetStringFromObj(objv[2], 0) );
+    isComplete = sqlite3_complete( Tcl_GetStringFromObj(objv[2], NULL) );
     pResult = Tcl_GetObjResult(interp);
     Tcl_SetBooleanObj(pResult, isComplete);
 #endif
@@ -2312,18 +2312,18 @@ static int SQLITE_TCLAPI DbObjCmd(
       return TCL_ERROR;
     }
     if( objc>=6 ){
-      zSep = Tcl_GetStringFromObj(objv[5], 0);
+      zSep = Tcl_GetStringFromObj(objv[5], NULL);
     }else{
       zSep = "\t";
     }
     if( objc>=7 ){
-      zNull = Tcl_GetStringFromObj(objv[6], 0);
+      zNull = Tcl_GetStringFromObj(objv[6], NULL);
     }else{
       zNull = "";
     }
-    zConflict = Tcl_GetStringFromObj(objv[2], 0);
-    zTable = Tcl_GetStringFromObj(objv[3], 0);
-    zFile = Tcl_GetStringFromObj(objv[4], 0);
+    zConflict = Tcl_GetStringFromObj(objv[2], NULL);
+    zTable = Tcl_GetStringFromObj(objv[3], NULL);
+    zFile = Tcl_GetStringFromObj(objv[4], NULL);
     nSep = strlen30(zSep);
     nNull = strlen30(zNull);
     if( nSep==0 ){
@@ -2648,7 +2648,7 @@ static int SQLITE_TCLAPI DbObjCmd(
     }
 
     pScript = objv[objc-1];
-    zName = Tcl_GetStringFromObj(objv[2], 0);
+    zName = Tcl_GetStringFromObj(objv[2], NULL);
     pFunc = findSqlFunc(pDb, zName);
     if( pFunc==0 ) return TCL_ERROR;
     if( pFunc->pScript ){
@@ -3443,7 +3443,7 @@ static int SQLITE_TCLAPI DbMain(
 #endif
 
   if( objc==2 ){
-    zArg = Tcl_GetStringFromObj(objv[1], 0);
+    zArg = Tcl_GetStringFromObj(objv[1], NULL);
     if( strcmp(zArg,"-version")==0 ){
       Tcl_AppendResult(interp,sqlite3_libversion(), (char*)0);
       return TCL_OK;
@@ -3531,7 +3531,7 @@ static int SQLITE_TCLAPI DbMain(
   zErrMsg = 0;
   p = (SqliteDb*)Tcl_Alloc( sizeof(*p) );
   memset(p, 0, sizeof(*p));
-  zFile = Tcl_GetStringFromObj(objv[2], 0);
+  zFile = Tcl_GetStringFromObj(objv[2], NULL);
   zFile = Tcl_TranslateFileName(interp, zFile, &translatedFilename);
   rc = sqlite3_open_v2(zFile, &p->db, flags, zVfs);
   Tcl_DStringFree(&translatedFilename);
@@ -3558,7 +3558,7 @@ static int SQLITE_TCLAPI DbMain(
   p->maxStmt = NUM_PREPARED_STMTS;
   p->openFlags = flags & SQLITE_OPEN_URI;
   p->interp = interp;
-  zArg = Tcl_GetStringFromObj(objv[1], 0);
+  zArg = Tcl_GetStringFromObj(objv[1], NULL);
   if( DbUseNre() ){
     Tcl_NRCreateCommand(interp, zArg, DbObjCmdAdaptor, DbObjCmd,
                         (char*)p, DbDeleteCmd);
