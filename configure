@@ -1365,7 +1365,7 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-  --enable-threads        build with threads
+  --enable-threads        build with threads (default: on)
   --enable-shared         build and link with shared libraries (default: on)
   --enable-stubs          build and link with stub libraries. Always true for
                           shared builds (default: on)
@@ -5201,16 +5201,6 @@ $as_echo "#define NO_ERRNO_H 1" >>confdefs.h
 fi
 
 
-    ac_fn_c_check_header_mongrel "$LINENO" "float.h" "ac_cv_header_float_h" "$ac_includes_default"
-if test "x$ac_cv_header_float_h" = xyes; then :
-
-else
-
-$as_echo "#define NO_FLOAT_H 1" >>confdefs.h
-
-fi
-
-
     ac_fn_c_check_header_mongrel "$LINENO" "values.h" "ac_cv_header_values_h" "$ac_includes_default"
 if test "x$ac_cv_header_values_h" = xyes; then :
 
@@ -7091,7 +7081,7 @@ fi
 	    LDFLAGS="$LDFLAGS -Wl,--export-dynamic"
 	    SHLIB_CFLAGS="-fPIC"
 	    SHLIB_SUFFIX=".so"
-	    SHLIB_LD='${CC} -shared ${CFLAGS} ${LDFLAGS}'
+	    SHLIB_LD='${CC} ${CFLAGS} ${LDFLAGS} -shared'
 	    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for inet_ntoa in -lnetwork" >&5
 $as_echo_n "checking for inet_ntoa in -lnetwork... " >&6; }
 if ${ac_cv_lib_network_inet_ntoa+:} false; then :
@@ -7318,7 +7308,7 @@ fi
 	    CFLAGS_OPTIMIZE="-O2 -fomit-frame-pointer"
 
 	    # TEA specific: use LDFLAGS_DEFAULT instead of LDFLAGS
-	    SHLIB_LD='${CC} -shared ${CFLAGS} ${LDFLAGS_DEFAULT}'
+	    SHLIB_LD='${CC} ${CFLAGS} ${LDFLAGS_DEFAULT} -shared'
 	    LDFLAGS="$LDFLAGS -Wl,--export-dynamic"
 	    if test $doRpath = yes; then :
 
@@ -7401,7 +7391,7 @@ fi
 		SHLIB_CFLAGS="-fpic"
 		;;
 	    esac
-	    SHLIB_LD='${CC} -shared ${SHLIB_CFLAGS}'
+	    SHLIB_LD='${CC} ${SHLIB_CFLAGS} -shared'
 	    SHLIB_SUFFIX=".so"
 	    if test $doRpath = yes; then :
 
@@ -7426,7 +7416,7 @@ fi
 	NetBSD-*)
 	    # NetBSD has ELF and can use 'cc -shared' to build shared libs
 	    SHLIB_CFLAGS="-fPIC"
-	    SHLIB_LD='${CC} -shared ${SHLIB_CFLAGS}'
+	    SHLIB_LD='${CC} ${SHLIB_CFLAGS} -shared'
 	    SHLIB_SUFFIX=".so"
 	    LDFLAGS="$LDFLAGS -export-dynamic"
 	    if test $doRpath = yes; then :
