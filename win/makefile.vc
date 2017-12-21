@@ -10,7 +10,7 @@
 # For other build options (debug, static etc.)
 # See TIP 477 (https://core.tcl.tk/tips/doc/trunk/tip/477.md) for
 # detailed documentation.
-# 
+#
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
@@ -36,7 +36,7 @@ PRJ_DEFINES = -D _CRT_SECURE_NO_DEPRECATE -D _CRT_NONSTDC_NO_DEPRECATE \
                   -DSQLITE_UNTESTABLE=1 -DSQLITE_OMIT_LOOKASIDE=1 \
                   -DSQLITE_SECURE_DELETE=1 -DSQLITE_SOUNDEX=1 \
                   -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT=1 -DDSQLITE_USE_ALLOCA=1 \
-                  -DSQLITE_ENABLE_FTS4=1 -DSQLITE_OMIT_DEPRECATED=1 
+                  -DSQLITE_ENABLE_FTS4=1 -DSQLITE_OMIT_DEPRECATED=1
 
 # Standard targets to build, install, test etc.
 !include "$(_RULESDIR)\targets.vc"
