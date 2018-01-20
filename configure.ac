@@ -19,7 +19,7 @@ dnl	to configure the system for the local environment.
 # so you can encode the package version directly into the source files.
 #-----------------------------------------------------------------------
 
-AC_INIT([sqlite], [3.21.0])
+AC_INIT([sqlite], [3.22.0])
 
 #--------------------------------------------------------------------
 # Call TEA_INIT as the first TEA_ macro to set up initial vars.
@@ -75,6 +75,7 @@ TEA_ADD_SOURCES([tclsqlite3.c])
 TEA_ADD_HEADERS([])
 TEA_ADD_INCLUDES([-I\"`\${CYGPATH} \${srcdir}/generic`\"])
 TEA_ADD_LIBS([])
+TEA_ADD_CFLAGS([-DSQLITE_ENABLE_DBPAGE_VTAB=1])
 TEA_ADD_CFLAGS([-DSQLITE_ENABLE_DBSTAT_VTAB=1])
 TEA_ADD_CFLAGS([-DSQLITE_ENABLE_FTS3_PARENTHESIS=1])
 TEA_ADD_CFLAGS([-DSQLITE_ENABLE_FTS4=1])
