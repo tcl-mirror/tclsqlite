@@ -1041,8 +1041,9 @@ static void tclSqlFunc(sqlite3_context *context, int argc, sqlite3_value**argv){
       ** has no string representation. */
       data = Tcl_GetByteArrayFromObj(pVar, &n);
       sqlite3_result_blob(context, data, n, SQLITE_TRANSIENT);
-    }else if( c=='b' && strcmp(zType,"boolean")==0 ){
-      Tcl_GetIntFromObj(0, pVar, &n);
+    }else if( c=='b' && (strcmp(zType,"boolean")==0 ||
+          strcmp(zType,"booleanString")) ){
+      Tcl_GetBooleanFromObj(0, pVar, &n);
       sqlite3_result_int(context, n);
     }else if( c=='d' && strcmp(zType,"double")==0 ){
       double r;
@@ -1409,8 +1410,9 @@ static int dbPrepareAndBind(
           sqlite3_bind_blob(pStmt, i, data, n, SQLITE_STATIC);
           Tcl_IncrRefCount(pVar);
           pPreStmt->apParm[iParm++] = pVar;
-        }else if( c=='b' && strcmp(zType,"boolean")==0 ){
-          Tcl_GetIntFromObj(interp, pVar, &n);
+        }else if( c=='b' && (strcmp(zType,"boolean")==0 ||
+              strcmp(zType,"booleanString")==0) ){
+          Tcl_GetBooleanFromObj(interp, pVar, &n);
           sqlite3_bind_int(pStmt, i, n);
         }else if( c=='d' && strcmp(zType,"double")==0 ){
           double r;
