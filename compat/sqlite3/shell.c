@@ -2890,7 +2890,7 @@ static int fsdirBestIndex(
 ** Register the "fsdir" virtual table.
 */
 static int fsdirRegister(sqlite3 *db){
-  static sqlite3_module fsdirModule = {
+  static const sqlite3_module fsdirModule = {
     0,                         /* iVersion */
     0,                         /* xCreate */
     fsdirConnect,              /* xConnect */
@@ -6172,7 +6172,7 @@ void zipfileFinal(sqlite3_context *pCtx){
 ** Register the "zipfile" virtual table.
 */
 static int zipfileRegister(sqlite3 *db){
-  static sqlite3_module zipfileModule = {
+  static const sqlite3_module zipfileModule = {
     1,                         /* iVersion */
     zipfileConnect,            /* xCreate */
     zipfileConnect,            /* xConnect */
@@ -7138,7 +7138,7 @@ static int expertFilter(
 }
 
 static int idxRegisterVtab(sqlite3expert *p){
-  static sqlite3_module expertModule = {
+  static const sqlite3_module expertModule = {
     2,                            /* iVersion */
     expertConnect,                /* xCreate - create a table */
     expertConnect,                /* xConnect - connect to an existing table */
