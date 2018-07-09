@@ -2398,7 +2398,7 @@ static int SQLITE_TCLAPI DbObjCmd(
     Tcl_DStringInit(&str);
     (void)sqlite3_exec(pDb->db, "BEGIN", 0, 0, 0);
     zCommit = "COMMIT";
-    while( Tcl_Gets(in, &str)!=-1 ){
+    while( (size_t)Tcl_Gets(in, &str)!=(size_t)-1 ) {
       char *z;
       lineno++;
       zLine = Tcl_DStringValue(&str);
