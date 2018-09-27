@@ -3547,6 +3547,7 @@ static int SQLITE_TCLAPI DbMain(
   flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX;
 #endif
 
+  if( objc==1 ) return sqliteCmdUsage(interp, objv);
   if( objc==2 ){
     zArg = Tcl_GetString(objv[1]);
     if( strcmp(zArg,"-version")==0 ){
