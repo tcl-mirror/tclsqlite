@@ -316,6 +316,7 @@ struct sqlite3_api_routines {
                             void (*xValue)(sqlite3_context*),
                             void (*xInv)(sqlite3_context*,int,sqlite3_value**),
                             void(*xDestroy)(void*));
+  const char *(*normalized_sql)(sqlite3_stmt*);
 };
 
 /*
@@ -603,6 +604,8 @@ typedef int (*sqlite3_loadext_entry)(
 #define sqlite3_str_value              sqlite3_api->str_value
 /* Version 3.25.0 and later */
 #define sqlite3_create_window_function sqlite3_api->create_window_function
+/* Version 3.26.0 and later */
+#define sqlite3_normalized_sql         sqlite3_api->normalized_sql
 #endif /* !defined(SQLITE_CORE) && !defined(SQLITE_OMIT_LOAD_EXTENSION) */
 
 #if !defined(SQLITE_CORE) && !defined(SQLITE_OMIT_LOAD_EXTENSION)
