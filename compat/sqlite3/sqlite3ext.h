@@ -310,12 +310,14 @@ struct sqlite3_api_routines {
   int (*str_errcode)(sqlite3_str*);
   int (*str_length)(sqlite3_str*);
   char *(*str_value)(sqlite3_str*);
+  /* Version 3.25.0 and later */
   int (*create_window_function)(sqlite3*,const char*,int,int,void*,
                             void (*xStep)(sqlite3_context*,int,sqlite3_value**),
                             void (*xFinal)(sqlite3_context*),
                             void (*xValue)(sqlite3_context*),
                             void (*xInv)(sqlite3_context*,int,sqlite3_value**),
                             void(*xDestroy)(void*));
+  /* Version 3.26.0 and later */
   const char *(*normalized_sql)(sqlite3_stmt*);
 };
 
