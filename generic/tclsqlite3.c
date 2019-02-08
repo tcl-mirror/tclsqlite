@@ -87,6 +87,10 @@
 # define EXTERN DLLEXPORT
 #endif
 
+#ifndef Tcl_BackgroundException
+# define Tcl_BackgroundException(interp, result) Tcl_BackgroundError(interp)
+#endif
+
 /*
  * If we are not sure the platform is 32-bit, always use sqlite3_????64()
  * in stead of sqlite3_????() for certain functions, in order to prevent overflow.
@@ -782,7 +786,7 @@ static void DbRollbackHandler(void *clientData){
   SqliteDb *pDb = (SqliteDb*)clientData;
   assert(pDb->pRollbackHook);
   if( TCL_OK!=Tcl_EvalObjEx(pDb->interp, pDb->pRollbackHook, 0) ){
-    Tcl_BackgroundError(pDb->interp);
+    Tcl_BackgroundException(pDb->interp, TCL_ERROR);
   }
 }
 
@@ -805,11 +809,11 @@ static int DbWalHandler(
   p = Tcl_DuplicateObj(pDb->pWalHook);
   Tcl_IncrRefCount(p);
   Tcl_ListObjAppendElement(interp, p, Tcl_NewStringObj(zDb, -1));
-  Tcl_ListObjAppendElement(interp, p, Tcl_NewIntObj(nEntry));
+  Tcl_ListObjAppendElement(interp, p, Tcl_NewWideIntObj(nEntry));
   if( TCL_OK!=Tcl_EvalObjEx(interp, p, 0)
    || TCL_OK!=Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &ret)
   ){
-    Tcl_BackgroundError(interp);
+    Tcl_BackgroundException(interp, TCL_ERROR);
   }
   Tcl_DecrRefCount(p);
 
@@ -820,9 +824,9 @@ static int DbWalHandler(
 static void setTestUnlockNotifyVars(Tcl_Interp *interp, int iArg, int nArg){
   char zBuf[64];
   sqlite3_snprintf(sizeof(zBuf), zBuf, "%d", iArg);
-  Tcl_SetVar(interp, "sqlite_unlock_notify_arg", zBuf, TCL_GLOBAL_ONLY);
+  Tcl_SetVar2(interp, "sqlite_unlock_notify_arg", NULL, zBuf, TCL_GLOBAL_ONLY);
   sqlite3_snprintf(sizeof(zBuf), zBuf, "%d", nArg);
-  Tcl_SetVar(interp, "sqlite_unlock_notify_argcount", zBuf, TCL_GLOBAL_ONLY);
+  Tcl_SetVar2(interp, "sqlite_unlock_notify_argcount", NULL, zBuf, TCL_GLOBAL_ONLY);
 }
 #else
 # define setTestUnlockNotifyVars(x,y,z)
@@ -994,11 +998,7 @@ static void tclSqlFunc(sqlite3_context *context, int argc, sqlite3_value**argv){
         }
         case SQLITE_INTEGER: {
           sqlite_int64 v = sqlite3_value_int64(pIn);
-          if( v>=-2147483647 && v<=2147483647 ){
-            pVal = Tcl_NewIntObj((int)v);
-          }else{
-            pVal = Tcl_NewWideIntObj(v);
-          }
+          pVal = Tcl_NewWideIntObj(v);
           break;
         }
         case SQLITE_FLOAT: {
@@ -1724,11 +1724,7 @@ static Tcl_Obj *dbEvalColumnValue(DbEvalContext *p, int iCol){
     }
     case SQLITE_INTEGER: {
       sqlite_int64 v = sqlite3_column_int64(pStmt, iCol);
-      if( v>=-2147483647 && v<=2147483647 ){
-        return Tcl_NewIntObj((int)v);
-      }else{
-        return Tcl_NewWideIntObj(v);
-      }
+      return Tcl_NewWideIntObj(v);
     }
     case SQLITE_FLOAT: {
       return Tcl_NewDoubleObj(sqlite3_column_double(pStmt, iCol));
@@ -1937,7 +1933,7 @@ static int SQLITE_TCLAPI DbObjCmd(
     Tcl_WrongNumArgs(interp, 1, objv, "SUBCOMMAND ...");
     return TCL_ERROR;
   }
-  if( Tcl_GetIndexFromObj(interp, objv[1], DB_strs, "option", 0, &choice) ){
+  if( Tcl_GetIndexFromObjStruct(interp, objv[1], DB_strs, sizeof(char *), "option", 0, &choice) ){
     return TCL_ERROR;
   }
 
@@ -2150,7 +2146,7 @@ static int SQLITE_TCLAPI DbObjCmd(
       return TCL_ERROR;
     }
     pResult = Tcl_GetObjResult(interp);
-    Tcl_SetIntObj(pResult, sqlite3_changes(pDb->db));
+    Tcl_SetWideIntObj(pResult, sqlite3_changes(pDb->db));
     break;
   }
 
@@ -2269,7 +2265,7 @@ static int SQLITE_TCLAPI DbObjCmd(
     }
     isComplete = sqlite3_complete( Tcl_GetString(objv[2]) );
     pResult = Tcl_GetObjResult(interp);
-    Tcl_SetBooleanObj(pResult, isComplete);
+    Tcl_SetWideIntObj(pResult, isComplete != 0);
 #endif
     break;
   }
@@ -2457,7 +2453,7 @@ static int SQLITE_TCLAPI DbObjCmd(
     if( zCommit[0] == 'C' ){
       /* success, set result as number of lines processed */
       pResult = Tcl_GetObjResult(interp);
-      Tcl_SetIntObj(pResult, lineno);
+      Tcl_SetWideIntObj(pResult, lineno);
       rc = TCL_OK;
     }else{
       /* failure, append lineno where failed */
@@ -2548,7 +2544,7 @@ static int SQLITE_TCLAPI DbObjCmd(
   ** call to sqlite3_exec().
   */
   case DB_ERRORCODE: {
-    Tcl_SetObjResult(interp, Tcl_NewIntObj(sqlite3_errcode(pDb->db)));
+    Tcl_SetObjResult(interp, Tcl_NewWideIntObj(sqlite3_errcode(pDb->db)));
     break;
   }
 
@@ -2577,7 +2573,7 @@ static int SQLITE_TCLAPI DbObjCmd(
         Tcl_ResetResult(interp);
       }
     }else if( rc==TCL_BREAK || rc==TCL_OK ){
-      pResult = Tcl_NewBooleanObj(rc==TCL_OK);
+      pResult = Tcl_NewWideIntObj(rc==TCL_OK);
     }
     dbEvalFinalize(&sEval);
     if( pResult ) Tcl_SetObjResult(interp, pResult);
@@ -3051,7 +3047,7 @@ static int SQLITE_TCLAPI DbObjCmd(
             (char*)0);
       return TCL_ERROR;
     }
-    Tcl_SetObjResult(interp, Tcl_NewIntObj(v));
+    Tcl_SetObjResult(interp, Tcl_NewWideIntObj(v));
     break;
   }
 
@@ -3084,7 +3080,7 @@ static int SQLITE_TCLAPI DbObjCmd(
       return TCL_ERROR;
     }
     pResult = Tcl_GetObjResult(interp);
-    Tcl_SetIntObj(pResult, sqlite3_total_changes(pDb->db));
+    Tcl_SetWideIntObj(pResult, sqlite3_total_changes(pDb->db));
     break;
   }
 
@@ -3162,7 +3158,7 @@ static int SQLITE_TCLAPI DbObjCmd(
           if( TCL_OK!=Tcl_ListObjIndex(interp, objv[3], i, &pObj) ){
             return TCL_ERROR;
           }
-          if( Tcl_GetIndexFromObj(interp, pObj, TTYPE_strs, "trace type",
+          if( Tcl_GetIndexFromObjStruct(interp, pObj, TTYPE_strs, sizeof(char *), "trace type",
                                   0, &ttype)!=TCL_OK ){
             Tcl_WideInt wType;
             Tcl_Obj *pError = Tcl_DuplicateObj(Tcl_GetObjResult(interp));
@@ -3236,7 +3232,7 @@ static int SQLITE_TCLAPI DbObjCmd(
         TTYPE_DEFERRED, TTYPE_EXCLUSIVE, TTYPE_IMMEDIATE
       };
       int ttype;
-      if( Tcl_GetIndexFromObj(interp, objv[2], TTYPE_strs, "transaction type",
+      if( Tcl_GetIndexFromObjStruct(interp, objv[2], TTYPE_strs, sizeof(char *), "transaction type",
                               0, &ttype) ){
         return TCL_ERROR;
       }
@@ -3330,14 +3326,14 @@ static int SQLITE_TCLAPI DbObjCmd(
     if( objc<3 ){
       Tcl_WrongNumArgs(interp, 2, objv, "SUB-COMMAND ?ARGS?");
     }
-    if( Tcl_GetIndexFromObj(interp, objv[2], azSub, "sub-command", 0, &iSub) ){
+    if( Tcl_GetIndexFromObjStruct(interp, objv[2], azSub, sizeof(char *), "sub-command", 0, &iSub) ){
       return TCL_ERROR;
     }
 
     switch( (enum DbPreupdateSubCmd)iSub ){
       case PRE_COUNT: {
         int nCol = sqlite3_preupdate_count(pDb->db);
-        Tcl_SetObjResult(interp, Tcl_NewIntObj(nCol));
+        Tcl_SetObjResult(interp, Tcl_NewWideIntObj(nCol));
         break;
       }
 
@@ -3356,7 +3352,7 @@ static int SQLITE_TCLAPI DbObjCmd(
           Tcl_WrongNumArgs(interp, 3, objv, "");
           return TCL_ERROR;
         }
-        pRet = Tcl_NewIntObj(sqlite3_preupdate_depth(pDb->db));
+        pRet = Tcl_NewWideIntObj(sqlite3_preupdate_depth(pDb->db));
         Tcl_SetObjResult(interp, pRet);
         break;
       }
@@ -3726,7 +3722,7 @@ EXTERN int Sqlite3_Init(Tcl_Interp *interp){
     ** command. */
     Tcl_CreateObjCommand(interp, "sqlite", (Tcl_ObjCmdProc*)DbMain, 0, 0);
 #endif
-    rc = Tcl_PkgProvide(interp, "sqlite3", PACKAGE_VERSION);
+    rc = Tcl_PkgProvideEx(interp, "sqlite3", PACKAGE_VERSION, NULL);
   }
   return rc;
 }
@@ -3829,11 +3825,11 @@ int SQLITE_CDECL TCLSH_MAIN(int argc, char **argv){
   Sqlite3_Init(interp);
 
   sqlite3_snprintf(sizeof(zArgc), zArgc, "%d", argc-1);
-  Tcl_SetVar(interp,"argc", zArgc, TCL_GLOBAL_ONLY);
-  Tcl_SetVar(interp,"argv0",argv[0],TCL_GLOBAL_ONLY);
-  Tcl_SetVar(interp,"argv", "", TCL_GLOBAL_ONLY);
+  Tcl_SetVar2(interp,"argc", NULL, zArgc, TCL_GLOBAL_ONLY);
+  Tcl_SetVar2(interp,"argv0", NULL, argv[0],TCL_GLOBAL_ONLY);
+  Tcl_SetVar2(interp,"argv", NULL, "", TCL_GLOBAL_ONLY);
   for(i=1; i<argc; i++){
-    Tcl_SetVar(interp, "argv", argv[i],
+    Tcl_SetVar2(interp, "argv", NULL, argv[i],
         TCL_GLOBAL_ONLY | TCL_LIST_ELEMENT | TCL_APPEND_VALUE);
   }
 #if defined(TCLSH_INIT_PROC)
@@ -3843,7 +3839,7 @@ int SQLITE_CDECL TCLSH_MAIN(int argc, char **argv){
     zScript = tclsh_main_loop();
   }
   if( Tcl_EvalEx(interp, zScript, -1, TCL_EVAL_GLOBAL)!=TCL_OK ){
-    const char *zInfo = Tcl_GetVar(interp, "errorInfo", TCL_GLOBAL_ONLY);
+    const char *zInfo = Tcl_GetVar2(interp, "errorInfo", NULL, TCL_GLOBAL_ONLY);
     if( zInfo==0 ) zInfo = Tcl_GetStringResult(interp);
     fprintf(stderr,"%s: %s\n", *argv, zInfo);
     return 1;
