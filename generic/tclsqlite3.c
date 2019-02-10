@@ -3712,6 +3712,11 @@ typedef struct {
 } PrivateTclInterp;
 static const char *Tcl_InitStubs(Tcl_Interp *interp, const char *version, int exact) {
   tclStubsPtr = ((PrivateTclInterp *)interp)->stubTable;
+  if (tclStubsPtr->magic != TCL_STUB_MAGIC) {
+    ((PrivateTclInterp *)interp)->result = (char *)"interpreter uses an incompatible stubs mechanism";
+    ((PrivateTclInterp *)interp)->freeProc = 0; /* TCL_STATIC */
+    return NULL;
+  }
   return Tcl_PkgRequireEx(interp, "Tcl", version, 0, (void *)&tclStubsPtr);
 }
 #endif
