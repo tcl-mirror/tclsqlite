@@ -1047,7 +1047,7 @@ static void tclSqlFunc(sqlite3_context *context, int argc, sqlite3_value**argv){
       data = Tcl_GetByteArrayFromObj(pVar, &n);
       sqlite3_result_blob(context, data, n, SQLITE_TRANSIENT);
     }else if( c=='b' && (strcmp(zType,"boolean")==0 ||
-          strcmp(zType,"booleanString")) ){
+          strcmp(zType,"booleanString")==0) ){
       Tcl_GetBooleanFromObj(0, pVar, &n);
       sqlite3_result_int(context, n);
     }else if( c=='d' && strcmp(zType,"double")==0 ){
