@@ -351,7 +351,7 @@ static void endTimer(void){
 /*
 ** Number of elements in an array
 */
-#define ArraySize(X)  (int)(sizeof(X)/sizeof(X[0]))
+#define ArraySize(X)    ((int)(sizeof(X)/sizeof(X[0])))
 
 /*
 ** If the following flag is set, then command execution stops
@@ -2080,9 +2080,9 @@ SQLITE_EXTENSION_INIT1
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <dirent.h>
 #if !defined(_WIN32) && !defined(WIN32)
 #  include <unistd.h>
-#  include <dirent.h>
 #  include <utime.h>
 #  include <sys/time.h>
 #else
@@ -2090,7 +2090,6 @@ SQLITE_EXTENSION_INIT1
 #  include <io.h>
 #  include <direct.h>
 /* #  include "test_windirent.h" */
-#  define dirent DIRENT
 #  ifndef chmod
 #    define chmod _chmod
 #  endif
@@ -2130,10 +2129,10 @@ SQLITE_EXTENSION_INIT1
 */
 static void readFileContents(sqlite3_context *ctx, const char *zName){
   FILE *in;
-  size_t nIn;
+  sqlite3_int64 nIn;
   void *pBuf;
   sqlite3 *db;
-  size_t mxBlob;
+  int mxBlob;
 
   in = fopen(zName, "rb");
   if( in==0 ){
@@ -2484,9 +2483,12 @@ static void writefileFunc(
   }
 
   if( argc>2 && res!=0 ){
+#if !defined(_WIN32) && !defined(WIN32)
     if( S_ISLNK(mode) ){
       ctxErrorMsg(context, "failed to create symlink: %s", zFile);
-    }else if( S_ISDIR(mode) ){
+    }else
+#endif
+    if( S_ISDIR(mode) ){
       ctxErrorMsg(context, "failed to create directory: %s", zFile);
     }else{
       ctxErrorMsg(context, "failed to write file: %s", zFile);
@@ -2509,9 +2511,12 @@ static void lsModeFunc(
   int iMode = sqlite3_value_int(argv[0]);
   char z[16];
   (void)argc;
+#if !defined(_WIN32) && !defined(WIN32)
   if( S_ISLNK(iMode) ){
     z[0] = 'l';
-  }else if( S_ISREG(iMode) ){
+  }else
+#endif
+  if( S_ISREG(iMode) ){
     z[0] = '-';
   }else if( S_ISDIR(iMode) ){
     z[0] = 'd';
@@ -4062,117 +4067,6 @@ int sqlite3_appendvfs_init(
 }
 
 /************************* End ../ext/misc/appendvfs.c ********************/
-/************************* Begin ../ext/misc/memtrace.c ******************/
-/*
-** 2019-01-21
-**
-** The author disclaims copyright to this source code.  In place of
-** a legal notice, here is a blessing:
-**
-**    May you do good and not evil.
-**    May you find forgiveness for yourself and forgive others.
-**    May you share freely, never taking more than you give.
-**
-*************************************************************************
-**
-** This file implements an extension that uses the SQLITE_CONFIG_MALLOC
-** mechanism to add a tracing layer on top of SQLite.  If this extension
-** is registered prior to sqlite3_initialize(), it will cause all memory
-** allocation activities to be logged on standard output, or to some other
-** FILE specified by the initializer.
-**
-** This file needs to be compiled into the application that uses it.
-**
-** This extension is used to implement the --memtrace option of the
-** command-line shell.
-*/
-#include <assert.h>
-#include <string.h>
-#include <stdio.h>
-
-/* The original memory allocation routines */
-static sqlite3_mem_methods memtraceBase;
-static FILE *memtraceOut;
-
-/* Methods that trace memory allocations */
-static void *memtraceMalloc(int n){
-  if( memtraceOut ){
-    fprintf(memtraceOut, "MEMTRACE: allocate %d bytes\n", 
-            memtraceBase.xRoundup(n));
-  }
-  return memtraceBase.xMalloc(n);
-}
-static void memtraceFree(void *p){
-  if( p==0 ) return;
-  if( memtraceOut ){
-    fprintf(memtraceOut, "MEMTRACE: free %d bytes\n", memtraceBase.xSize(p));
-  }
-  memtraceBase.xFree(p);
-}
-static void *memtraceRealloc(void *p, int n){
-  if( p==0 ) return memtraceMalloc(n);
-  if( n==0 ){
-    memtraceFree(p);
-    return 0;
-  }
-  if( memtraceOut ){
-    fprintf(memtraceOut, "MEMTRACE: resize %d -> %d bytes\n",
-            memtraceBase.xSize(p), memtraceBase.xRoundup(n));
-  }
-  return memtraceBase.xRealloc(p, n);
-}
-static int memtraceSize(void *p){
-  return memtraceBase.xSize(p);
-}
-static int memtraceRoundup(int n){
-  return memtraceBase.xRoundup(n);
-}
-static int memtraceInit(void *p){
-  return memtraceBase.xInit(p);
-}
-static void memtraceShutdown(void *p){
-  memtraceBase.xShutdown(p);
-}
-
-/* The substitute memory allocator */
-static sqlite3_mem_methods ersaztMethods = {
-  memtraceMalloc,
-  memtraceFree,
-  memtraceRealloc,
-  memtraceSize,
-  memtraceRoundup,
-  memtraceInit,
-  memtraceShutdown,
-  0
-};
-
-/* Begin tracing memory allocations to out. */
-int sqlite3MemTraceActivate(FILE *out){
-  int rc = SQLITE_OK;
-  if( memtraceBase.xMalloc==0 ){
-    rc = sqlite3_config(SQLITE_CONFIG_GETMALLOC, &memtraceBase);
-    if( rc==SQLITE_OK ){
-      rc = sqlite3_config(SQLITE_CONFIG_MALLOC, &ersaztMethods);
-    }
-  }
-  memtraceOut = out;
-  return rc;
-}
-
-/* Deactivate memory tracing */
-int sqlite3MemTraceDeactivate(void){
-  int rc = SQLITE_OK;
-  if( memtraceBase.xMalloc!=0 ){
-    rc = sqlite3_config(SQLITE_CONFIG_MALLOC, &memtraceBase);
-    if( rc==SQLITE_OK ){
-      memset(&memtraceBase, 0, sizeof(memtraceBase));
-    }
-  }
-  memtraceOut = 0;
-  return rc;
-}
-
-/************************* End ../ext/misc/memtrace.c ********************/
 #ifdef SQLITE_HAVE_ZLIB
 /************************* Begin ../ext/misc/zipfile.c ******************/
 /*
@@ -4215,8 +4109,13 @@ SQLITE_EXTENSION_INIT1
 /* typedef sqlite3_int64 i64; */
 /* typedef unsigned char u8; */
 typedef unsigned short u16;
-typedef unsigned long u32;
-#define MIN(a,b) ((a)<(b) ? (a) : (b))
+typedef unsigned int u32;
+#ifndef MIN
+# define MIN(A,B) ((A)<(B)?(A):(B))
+#endif
+#ifndef MAX
+# define MAX(A,B) ((A)>(B)?(A):(B))
+#endif
 
 #if defined(SQLITE_COVERAGE_TEST) || defined(SQLITE_MUTATION_TEST)
 # define ALWAYS(X)      (1)
@@ -5153,8 +5052,8 @@ static void zipfileInflate(
 ** case.
 */
 static int zipfileDeflate(
-  const u8 *aIn, int nIn,         /* Input */
-  u8 **ppOut, int *pnOut,         /* Output */
+  const u8 *aIn, size_t nIn,         /* Input */
+  u8 **ppOut, size_t *pnOut,         /* Output */
   char **pzErr                    /* OUT: Error message */
 ){
   size_t nAlloc = compressBound(nIn);
@@ -5178,7 +5077,7 @@ static int zipfileDeflate(
 
     if( res==Z_STREAM_END ){
       *ppOut = aOut;
-      *pnOut = (int)str.total_out;
+      *pnOut = str.total_out;
     }else{
       sqlite3_free(aOut);
       *pzErr = sqlite3_mprintf("zipfile: deflate() error");
@@ -5709,7 +5608,7 @@ static int zipfileUpdate(
   const char *zPath = 0;          /* Path for new entry */
   int nPath = 0;                  /* strlen(zPath) */
   const u8 *pData = 0;            /* Pointer to buffer containing content */
-  int nData = 0;                  /* Size of pData buffer in bytes */
+  size_t nData = 0;               /* Size of pData buffer in bytes */
   int iMethod = 0;                /* Compression method for new entry */
   u8 *pFree = 0;                  /* Free this */
   char *zFree = 0;                /* Also free this */
@@ -5761,7 +5660,7 @@ static int zipfileUpdate(
         /* Value specified for "data", and possibly "method". This must be
         ** a regular file or a symlink. */
         const u8 *aIn = sqlite3_value_blob(apVal[7]);
-        int nIn = sqlite3_value_bytes(apVal[7]);
+        size_t nIn = sqlite3_value_bytes(apVal[7]);
         int bAuto = sqlite3_value_type(apVal[8])==SQLITE_NULL;
 
         iMethod = sqlite3_value_int(apVal[8]);
@@ -5773,7 +5672,7 @@ static int zipfileUpdate(
           rc = SQLITE_CONSTRAINT;
         }else{
           if( bAuto || iMethod ){
-            int nCmp;
+            size_t nCmp;
             rc = zipfileDeflate(aIn, nIn, &pFree, &nCmp, &pTab->base.zErrMsg);
             if( rc==SQLITE_OK ){
               if( iMethod || nCmp<nIn ){
@@ -6059,8 +5958,8 @@ static int zipfileFindFunction(
 typedef struct ZipfileBuffer ZipfileBuffer;
 struct ZipfileBuffer {
   u8 *a;                          /* Pointer to buffer */
-  int n;                          /* Size of buffer in bytes */
-  int nAlloc;                     /* Byte allocated at a[] */
+  size_t n;                       /* Size of buffer in bytes */
+  size_t nAlloc;                  /* Byte allocated at a[] */
 };
 
 typedef struct ZipfileCtx ZipfileCtx;
@@ -6070,7 +5969,7 @@ struct ZipfileCtx {
   ZipfileBuffer cds;
 };
 
-static int zipfileBufferGrow(ZipfileBuffer *pBuf, int nByte){
+static int zipfileBufferGrow(ZipfileBuffer *pBuf, size_t nByte){
   if( pBuf->n+nByte>pBuf->nAlloc ){
     u8 *aNew;
     size_t nNew = pBuf->n ? pBuf->n*2 : 512;
@@ -6111,7 +6010,7 @@ void zipfileStep(sqlite3_context *pCtx, int nVal, sqlite3_value **apVal){
   int iMethod = -1;               /* Compression method to use (0 or 8) */
 
   const u8 *aData = 0;            /* Possibly compressed data for new entry */
-  int nData = 0;                  /* Size of aData[] in bytes */
+  size_t nData = 0;               /* Size of aData[] in bytes */
   int szUncompressed = 0;         /* Size of data before compression */
   u8 *aFree = 0;                  /* Free this before returning */
   u32 iCrc32 = 0;                 /* crc32 of uncompressed data */
@@ -6119,7 +6018,7 @@ void zipfileStep(sqlite3_context *pCtx, int nVal, sqlite3_value **apVal){
   char *zName = 0;                /* Path (name) of new entry */
   int nName = 0;                  /* Size of zName in bytes */
   char *zFree = 0;                /* Free this before returning */
-  int nByte;
+  size_t nByte;
 
   memset(&e, 0, sizeof(e));
   p = (ZipfileCtx*)sqlite3_aggregate_context(pCtx, sizeof(ZipfileCtx));
@@ -6174,7 +6073,7 @@ void zipfileStep(sqlite3_context *pCtx, int nVal, sqlite3_value **apVal){
     szUncompressed = nData = sqlite3_value_bytes(pData);
     iCrc32 = crc32(0, aData, nData);
     if( iMethod<0 || iMethod==8 ){
-      int nOut = 0;
+      size_t nOut = 0;
       rc = zipfileDeflate(aData, nData, &aFree, &nOut, &zErr);
       if( rc!=SQLITE_OK ){
         goto zipfile_step_out;
@@ -6291,7 +6190,7 @@ void zipfileFinal(sqlite3_context *pCtx){
       memcpy(aZip, p->body.a, p->body.n);
       memcpy(&aZip[p->body.n], p->cds.a, p->cds.n);
       zipfileSerializeEOCD(&eocd, &aZip[p->body.n + p->cds.n]);
-      sqlite3_result_blob(pCtx, aZip, (int)nZip, zipfileFree);
+      sqlite3_result_blob(pCtx, aZip, nZip, zipfileFree);
     }
   }
 
@@ -8869,8 +8768,8 @@ static void editFunc(
   int rc;
   int hasCRNL = 0;
   FILE *f = 0;
-  sqlite3_int64 sz;
-  sqlite3_int64 x;
+  size_t sz;
+  size_t x;
   unsigned char *p = 0;
 
   if( argc==2 ){
@@ -11322,7 +11221,7 @@ static int process_input(ShellState *p);
 ** NULL is returned if any error is encountered. The final value of *pnByte
 ** is undefined in this case.
 */
-static char *readFile(const char *zName){
+static char *readFile(const char *zName, size_t *pnByte){
   FILE *in = fopen(zName, "rb");
   size_t nIn;
   size_t nRead;
@@ -11340,6 +11239,7 @@ static char *readFile(const char *zName){
     return 0;
   }
   pBuf[nIn] = 0;
+  if( pnByte ) *pnByte = nIn;
   return pBuf;
 }
 
@@ -11440,7 +11340,7 @@ int deduceDatabaseType(const char *zName, int dfltZip){
 ** program.  Read content from the file in p->zDbFilename.  If p->zDbFilename
 ** is 0, then read from standard input.
 */
-static unsigned char *readHexDb(ShellState *p, int *pnData){
+static unsigned char *readHexDb(ShellState *p, size_t *pnData){
   unsigned char *a = 0;
   int nLine;
   int n = 0;
@@ -11616,7 +11516,7 @@ static void open_db(ShellState *p, int openFlags){
     else
     if( p->openMode==SHELL_OPEN_DESERIALIZE || p->openMode==SHELL_OPEN_HEXDB ){
       int rc;
-      int nData = 0;
+      size_t nData = 0;
       unsigned char *aData;
       if( p->openMode==SHELL_OPEN_DESERIALIZE ){
         aData = (unsigned char*)readFile(p->zDbFilename, &nData);
@@ -11947,7 +11847,7 @@ static void import_append_char(ImportCtx *p, int c){
 **      EOF on end-of-file.
 **   +  Report syntax errors on stderr
 */
-static char *SQLITE_CDECL csv_read_one_field(ImportCtx *p){
+static const char *SQLITE_CDECL csv_read_one_field(ImportCtx *p){
   int c;
   int cSep = p->cColSep;
   int rSep = p->cRowSep;
@@ -12037,7 +11937,7 @@ static char *SQLITE_CDECL csv_read_one_field(ImportCtx *p){
 **      EOF on end-of-file.
 **   +  Report syntax errors on stderr
 */
-static char *SQLITE_CDECL ascii_read_one_field(ImportCtx *p){
+static const char *SQLITE_CDECL ascii_read_one_field(ImportCtx *p){
   int c;
   int cSep = p->cColSep;
   int rSep = p->cRowSep;
@@ -13785,7 +13685,7 @@ static int do_meta_command(char *zLine, ShellState *p){
     if( nArg!=2 ){
       raw_printf(stderr, "Usage: .check GLOB-PATTERN\n");
       rc = 2;
-    }else if( (zRes = readFile("testcase-out.txt"))==0 ){
+    }else if( (zRes = readFile("testcase-out.txt", NULL))==0 ){
       raw_printf(stderr, "Error: cannot read 'testcase-out.txt'\n");
       rc = 2;
     }else if( testcase_glob(azArg[1],zRes)==0 ){
@@ -14112,7 +14012,7 @@ static int do_meta_command(char *zLine, ShellState *p){
     int nSep;                   /* Number of bytes in p->colSeparator[] */
     char *zSql;                 /* An SQL statement */
     ImportCtx sCtx;             /* Reader context */
-    char *(SQLITE_CDECL *xRead)(ImportCtx*); /* Func to read one value */
+    const char *(SQLITE_CDECL *xRead)(ImportCtx*); /* Func to read one value */
     int (SQLITE_CDECL *xCloser)(FILE*);      /* Func to close file */
 
     if( nArg!=3 ){
@@ -14251,7 +14151,7 @@ static int do_meta_command(char *zLine, ShellState *p){
     do{
       int startLine = sCtx.nLine;
       for(i=0; i<nCol; i++){
-        char *z = xRead(&sCtx);
+        const char *z = xRead(&sCtx);
         /*
         ** Did we reach end-of-file before finding any columns?
         ** If so, stop instead of NULL filling the remaining columns.
@@ -16340,7 +16240,6 @@ static const char zOptions[] =
 #if defined(SQLITE_ENABLE_DESERIALIZE)
   "   -maxsize N           maximum size for a --deserialize database\n"
 #endif
-  "   -memtrace            trace all memory allocations and deallocations\n"
   "   -mmap N              default mmap size set to N\n"
 #ifdef SQLITE_ENABLE_MULTIPLEX
   "   -multiplex           enable the multiplexor VFS\n"
@@ -16667,8 +16566,6 @@ int SQLITE_CDECL wmain(int argc, wchar_t **wargv){
       ** command, so ignore them */
       break;
 #endif
-    }else if( strcmp(z, "-memtrace")==0 ){
-      sqlite3MemTraceActivate(stderr);
     }
   }
   verify_uninitialized();
@@ -16816,8 +16713,6 @@ int SQLITE_CDECL wmain(int argc, wchar_t **wargv){
     }else if( strcmp(z,"-lookaside")==0 ){
       i+=2;
     }else if( strcmp(z,"-mmap")==0 ){
-      i++;
-    }else if( strcmp(z,"-memtrace")==0 ){
       i++;
 #ifdef SQLITE_ENABLE_SORTER_REFERENCES
     }else if( strcmp(z,"-sorterref")==0 ){
