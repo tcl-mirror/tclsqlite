@@ -2149,13 +2149,13 @@ static void readFileContents(sqlite3_context *ctx, const char *zName){
     fclose(in);
     return;
   }
-  pBuf = sqlite3_malloc( nIn );
+  pBuf = sqlite3_malloc( nIn ? nIn : 1 );
   if( pBuf==0 ){
     sqlite3_result_error_nomem(ctx);
     fclose(in);
     return;
   }
-  if( 1==fread(pBuf, nIn, 1, in) ){
+  if( nIn==fread(pBuf, 1, nIn, in) ){
     sqlite3_result_blob64(ctx, pBuf, nIn, sqlite3_free);
   }else{
     sqlite3_result_error_code(ctx, SQLITE_IOERR);
@@ -10413,6 +10413,55 @@ static void restore_debug_trace_modes(void){
 #endif
 }
 
+/* Name of the TEMP table that holds bind parameter values */
+#define BIND_PARAM_TABLE "$Parameters"
+
+/*
+** Bind parameters on a prepared statement.
+**
+** Parameter bindings are taken from a TEMP table of the form:
+**
+**    CREATE TEMP TABLE "$Parameters"(key TEXT PRIMARY KEY, value)
+**    WITHOUT ROWID;
+**
+** No bindings occur if this table does not exist.  The special character '$'
+** is included in the table name to help prevent collisions with actual tables.
+** The table must be in the TEMP schema.
+*/
+static void bind_prepared_stmt(ShellState *pArg, sqlite3_stmt *pStmt){
+  int nVar;
+  int i;
+  int rc;
+  sqlite3_stmt *pQ = 0;
+
+  nVar = sqlite3_bind_parameter_count(pStmt);
+  if( nVar==0 ) return;  /* Nothing to do */
+  if( sqlite3_table_column_metadata(pArg->db, "TEMP", BIND_PARAM_TABLE,
+                                    "key", 0, 0, 0, 0, 0)!=SQLITE_OK ){
+    return; /* Parameter table does not exist */
+  }
+  rc = sqlite3_prepare_v2(pArg->db,
+          "SELECT value FROM temp.\"" BIND_PARAM_TABLE "\""
+          " WHERE key=?1", -1, &pQ, 0);
+  if( rc || pQ==0 ) return;
+  for(i=1; i<=nVar; i++){
+    char zNum[30];
+    const char *zVar = sqlite3_bind_parameter_name(pStmt, i);
+    if( zVar==0 ){
+      sqlite3_snprintf(sizeof(zNum),zNum,"?%d",i);
+      zVar = zNum;
+    }
+    sqlite3_bind_text(pQ, 1, zVar, -1, SQLITE_STATIC);
+    if( sqlite3_step(pQ)==SQLITE_ROW ){
+      sqlite3_bind_value(pStmt, i, sqlite3_column_value(pQ, 0));
+    }else{
+      sqlite3_bind_null(pStmt, i);
+    }
+    sqlite3_reset(pQ);
+  }
+  sqlite3_finalize(pQ);
+}
+
 /*
 ** Run a prepared statement
 */
@@ -10732,6 +10781,7 @@ static int shell_exec(
         }
       }
 
+      bind_prepared_stmt(pArg, pStmt);
       exec_prepared_stmt(pArg, pStmt);
       explain_data_delete(pArg);
       eqp_render(pArg);

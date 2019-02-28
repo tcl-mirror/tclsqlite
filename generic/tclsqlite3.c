@@ -80,15 +80,15 @@
 # define GETPID (int)GetCurrentProcessId
 #endif
 
-#ifndef CONST
-# define CONST const
-#endif
-#ifndef EXTERN
-# define EXTERN DLLEXPORT
-#endif
+#ifdef USE_TCL_STUBS
+# undef Tcl_BackgroundException
+# define Tcl_BackgroundException(interp, result) (DbUseNre()? \
+    ((void (*)(Tcl_Interp *, int))((&(tclStubsPtr->tcl_PkgProvideEx))[609]))((interp), (result)): \
+    ((void (*)(Tcl_Interp *))((&(tclStubsPtr->tcl_PkgProvideEx))[76]))(interp))
+#endif /* USE_TCL_STUBS */
 
-#ifndef Tcl_BackgroundException
-# define Tcl_BackgroundException(interp, result) Tcl_BackgroundError(interp)
+#if TCL_MAJOR_VERSION>8 || (TCL_MAJOR_VERSION==8 && TCL_MINOR_VERSION>=6)
+static int DbUseNre(void);
 #endif
 
 /*
@@ -122,6 +122,14 @@ typedef struct SqliteDb SqliteDb;
 /*
 ** New SQL functions can be created as TCL scripts.  Each such function
 ** is described by an instance of the following structure.
+**
+** Variable eType may be set to SQLITE_INTEGER, SQLITE_FLOAT, SQLITE_TEXT,
+** SQLITE_BLOB or SQLITE_NULL. If it is SQLITE_NULL, then the implementation
+** attempts to determine the type of the result based on the Tcl object.
+** If it is SQLITE_TEXT or SQLITE_BLOB, then a text (sqlite3_result_text())
+** or blob (sqlite3_result_blob()) is returned. If it is SQLITE_INTEGER
+** or SQLITE_FLOAT, then an attempt is made to return an integer or float
+** value, falling back to float and then text if this is not possible.
 */
 typedef struct SqlFunc SqlFunc;
 struct SqlFunc {
@@ -129,6 +137,7 @@ struct SqlFunc {
   Tcl_Obj *pScript;     /* The Tcl_Obj representation of the script */
   SqliteDb *pDb;        /* Database connection that owns this function */
   int useEvalObjv;      /* True if it is safe to use Tcl_EvalObjv */
+  int eType;            /* Type of value to return */
   char *zName;          /* Name of this function */
   SqlFunc *pNext;       /* Next function on the list of them all */
 };
@@ -318,7 +327,7 @@ static int SQLITE_TCLAPI incrblobInput(
 */
 static int SQLITE_TCLAPI incrblobOutput(
   ClientData instanceData,
-  CONST char *buf,
+  const char *buf,
   int toWrite,
   int *errorCodePtr
 ){
@@ -783,10 +792,11 @@ static int DbCommitHandler(void *cd){
 }
 
 static void DbRollbackHandler(void *clientData){
+  int rc;
   SqliteDb *pDb = (SqliteDb*)clientData;
   assert(pDb->pRollbackHook);
-  if( TCL_OK!=Tcl_EvalObjEx(pDb->interp, pDb->pRollbackHook, 0) ){
-    Tcl_BackgroundException(pDb->interp, TCL_ERROR);
+  if( TCL_OK!=(rc=Tcl_EvalObjEx(pDb->interp, pDb->pRollbackHook, 0)) ){
+    Tcl_BackgroundException(pDb->interp, rc);
   }
 }
 
@@ -799,7 +809,7 @@ static int DbWalHandler(
   const char *zDb,
   int nEntry
 ){
-  int ret = SQLITE_OK;
+  int ret = SQLITE_OK, rc;
   Tcl_Obj *p;
   SqliteDb *pDb = (SqliteDb*)clientData;
   Tcl_Interp *interp = pDb->interp;
@@ -810,10 +820,10 @@ static int DbWalHandler(
   Tcl_IncrRefCount(p);
   Tcl_ListObjAppendElement(interp, p, Tcl_NewStringObj(zDb, -1));
   Tcl_ListObjAppendElement(interp, p, Tcl_NewWideIntObj(nEntry));
-  if( TCL_OK!=Tcl_EvalObjEx(interp, p, 0)
-   || TCL_OK!=Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &ret)
+  if( TCL_OK!=(rc=Tcl_EvalObjEx(interp, p, 0))
+   || TCL_OK!=(rc=Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &ret))
   ){
-    Tcl_BackgroundException(interp, TCL_ERROR);
+    Tcl_BackgroundException(interp, rc);
   }
   Tcl_DecrRefCount(p);
 
@@ -1041,28 +1051,56 @@ static void tclSqlFunc(sqlite3_context *context, int argc, sqlite3_value**argv){
     u8 *data;
     const char *zType = (pVar->typePtr ? pVar->typePtr->name : "");
     char c = zType[0];
-    if( c=='b' && strcmp(zType,"bytearray")==0 && pVar->bytes==0 ){
-      /* Only return a BLOB type if the Tcl variable is a bytearray and
-      ** has no string representation. */
-      data = Tcl_GetByteArrayFromObj(pVar, &n);
-      sqlite3_result_blob(context, data, n, SQLITE_TRANSIENT);
-    }else if( c=='b' && (strcmp(zType,"boolean")==0 ||
-          strcmp(zType,"booleanString")==0) ){
-      Tcl_GetBooleanFromObj(0, pVar, &n);
-      sqlite3_result_int(context, n);
-    }else if( c=='d' && strcmp(zType,"double")==0 ){
-      double r;
-      Tcl_GetDoubleFromObj(0, pVar, &r);
-      sqlite3_result_double(context, r);
-    }else if( (c=='w' && strcmp(zType,"wideInt")==0) ||
-          (c=='i' && strcmp(zType,"int")==0) ){
-      Tcl_WideInt v;
-      Tcl_GetWideIntFromObj(0, pVar, &v);
-      sqlite3_result_int64(context, v);
-    }else{
-      data = (unsigned char *)Tcl_GetString(pVar);
-      sqlite3_result_text(context, (char *)data, pVar->length, SQLITE_TRANSIENT);
+
+    int eType = p->eType;
+
+    if( eType==SQLITE_NULL ){
+      if( c=='b' && strcmp(zType,"bytearray")==0 && pVar->bytes==0 ){
+        /* Only return a BLOB type if the Tcl variable is a bytearray and
+        ** has no string representation. */
+        eType = SQLITE_BLOB;
+      }else if( (c=='b' && ((strcmp(zType,"boolean")==0)
+             || (strcmp(zType,"booleanString")==0)))
+             || (c=='w' && strcmp(zType,"wideInt")==0)
+             || (c=='i' && strcmp(zType,"int")==0) 
+      ){
+        eType = SQLITE_INTEGER;
+      }else if( c=='d' && strcmp(zType,"double")==0 ){
+        eType = SQLITE_FLOAT;
+      }else{
+        eType = SQLITE_TEXT;
+      }
     }
+
+    switch( eType ){
+      case SQLITE_BLOB: {
+        data = Tcl_GetByteArrayFromObj(pVar, &n);
+        sqlite3_result_blob(context, data, n, SQLITE_TRANSIENT);
+        break;
+      }
+      case SQLITE_INTEGER: {
+        Tcl_WideInt v;
+        if( TCL_OK==Tcl_GetWideIntFromObj(0, pVar, &v) ){
+          sqlite3_result_int64(context, v);
+          break;
+        }
+        /* fall-through */
+      }
+      case SQLITE_FLOAT: {
+        double r;
+        if( TCL_OK==Tcl_GetDoubleFromObj(0, pVar, &r) ){
+          sqlite3_result_double(context, r);
+          break;
+        }
+        /* fall-through */
+      }
+      default: {
+        data = (unsigned char *)Tcl_GetStringFromObj(pVar, &n);
+        sqlite3_result_text(context, (char *)data, n, SQLITE_TRANSIENT);
+        break;
+      }
+    }
+
   }
 }
 
@@ -1746,7 +1784,7 @@ static Tcl_Obj *dbEvalColumnValue(DbEvalContext *p, int iCol){
 */
 #if TCL_MAJOR_VERSION>8 || (TCL_MAJOR_VERSION==8 && TCL_MINOR_VERSION>=6)
 # define SQLITE_TCL_NRE 1
-static int DbUseNre(void){
+int DbUseNre(void){
   int major, minor;
   Tcl_GetVersion(&major, &minor, 0, 0);
   return( (major==8 && minor>=6) || major>8 );
@@ -2513,7 +2551,7 @@ static int SQLITE_TCLAPI DbObjCmd(
     }
     pValue = objv[objc-1];
     pBA = Tcl_GetByteArrayFromObj(pValue, &len);
-    pData = sqlite3_malloc64( len );
+    pData = sqlite3_malloc( len );
     if( pData==0 && len>0 ){
       Tcl_AppendResult(interp, "out of memory", (char*)0);
       rc = TCL_ERROR;
@@ -2694,6 +2732,7 @@ deserialize_error:
     char *zName;
     int nArg = -1;
     int i;
+    int eType = SQLITE_NULL;
     if( objc<4 ){
       Tcl_WrongNumArgs(interp, 2, objv, "NAME ?SWITCHES? SCRIPT");
       return TCL_ERROR;
@@ -2701,7 +2740,7 @@ deserialize_error:
     for(i=3; i<(objc-1); i++){
       const char *z = Tcl_GetString(objv[i]);
       int n = strlen30(z);
-      if( n>2 && strncmp(z, "-argcount",n)==0 ){
+      if( n>1 && strncmp(z, "-argcount",n)==0 ){
         if( i==(objc-2) ){
           Tcl_AppendResult(interp, "option requires an argument: ", z,(char*)0);
           return TCL_ERROR;
@@ -2714,11 +2753,25 @@ deserialize_error:
         }
         i++;
       }else
-      if( n>2 && strncmp(z, "-deterministic",n)==0 ){
+      if( n>1 && strncmp(z, "-deterministic",n)==0 ){
         flags |= SQLITE_DETERMINISTIC;
+      }else
+      if( n>1 && strncmp(z, "-returntype", n)==0 ){
+        const char *const azType[] = {"integer", "real", "text", "blob", "any", 0};
+        assert( SQLITE_INTEGER==1 && SQLITE_FLOAT==2 && SQLITE_TEXT==3 );
+        assert( SQLITE_BLOB==4 && SQLITE_NULL==5 );
+        if( i==(objc-2) ){
+          Tcl_AppendResult(interp, "option requires an argument: ", z,(char*)0);
+          return TCL_ERROR;
+        }
+        i++;
+        if( Tcl_GetIndexFromObjStruct(interp, objv[i], azType, sizeof(char*), "type", 0, &eType) ){
+          return TCL_ERROR;
+        }
+        eType++;
       }else{
         Tcl_AppendResult(interp, "bad option \"", z,
-            "\": must be -argcount or -deterministic", (char*)0
+            "\": must be -argcount, -deterministic or -returntype", (char*)0
         );
         return TCL_ERROR;
       }
@@ -2734,6 +2787,7 @@ deserialize_error:
     pFunc->pScript = pScript;
     Tcl_IncrRefCount(pScript);
     pFunc->useEvalObjv = safeToUseEvalObjv(interp, pScript);
+    pFunc->eType = eType;
     rc = sqlite3_create_function_v2(pDb->db, zName, nArg, flags,
         pFunc, tclSqlFunc, 0, 0, 0);
     if( rc!=SQLITE_OK ){
@@ -3739,9 +3793,9 @@ static const char *Tcl_InitStubs(Tcl_Interp *interp, const char *version, int ex
 ** used to open a new SQLite database.  See the DbMain() routine above
 ** for additional information.
 **
-** The EXTERN macros are required by TCL in order to work on windows.
+** The DLLEXPORT macros are required by TCL in order to work on windows.
 */
-EXTERN int Sqlite3_Init(Tcl_Interp *interp){
+DLLEXPORT int Sqlite3_Init(Tcl_Interp *interp){
   int rc = Tcl_InitStubs(interp, "8.5-", 0) ? TCL_OK : TCL_ERROR;
   if( rc!=TCL_OK ){
     rc = Tcl_InitStubs(interp, "8.4", 0) ? TCL_OK : TCL_ERROR;
@@ -3758,16 +3812,16 @@ EXTERN int Sqlite3_Init(Tcl_Interp *interp){
   }
   return rc;
 }
-EXTERN int Tclsqlite3_Init(Tcl_Interp *interp){ return Sqlite3_Init(interp); }
-EXTERN int Sqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
-EXTERN int Tclsqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
+DLLEXPORT int Tclsqlite3_Init(Tcl_Interp *interp){ return Sqlite3_Init(interp); }
+DLLEXPORT int Sqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
+DLLEXPORT int Tclsqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
 
 /* Because it accesses the file-system and uses persistent state, SQLite
 ** is not considered appropriate for safe interpreters.  Hence, we cause
 ** the _SafeInit() interfaces return TCL_ERROR.
 */
-EXTERN int Sqlite3_SafeInit(Tcl_Interp *interp){ return TCL_ERROR; }
-EXTERN int Sqlite3_SafeUnload(Tcl_Interp *interp, int flags){return TCL_ERROR;}
+DLLEXPORT int Sqlite3_SafeInit(Tcl_Interp *interp){ return TCL_ERROR; }
+DLLEXPORT int Sqlite3_SafeUnload(Tcl_Interp *interp, int flags){return TCL_ERROR;}
 
 
 
