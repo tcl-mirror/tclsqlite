@@ -11172,7 +11172,7 @@ static const char *(azHelp[]) = {
   "   Options:",
   "     --preserve-rowids      Include ROWID values in the output",
   "     --newlines             Allow unescaped newline characters in output",
-  "   TABLE is LIKE pattern for the tables to dump",
+  "   TABLE is a LIKE pattern for the tables to dump",
   ".echo on|off             Turn command echo on or off",
   ".eqp on|off|full|...     Enable or disable automatic EXPLAIN QUERY PLAN",
   "   Other Modes:",
@@ -11541,7 +11541,7 @@ static unsigned char *readHexDb(ShellState *p, int *pnData){
   int j, k;
   int rc;
   FILE *in;
-  unsigned char x[16];
+  unsigned int x[16];
   char zLine[1000];
   if( p->zDbFilename ){
     in = fopen(p->zDbFilename, "r");
@@ -11553,6 +11553,7 @@ static unsigned char *readHexDb(ShellState *p, int *pnData){
   }else{
     in = p->in;
     nLine = p->lineno;
+    if( in==0 ) in = stdin;
   }
   *pnData = 0;
   nLine++;
@@ -11579,14 +11580,14 @@ static unsigned char *readHexDb(ShellState *p, int *pnData){
     if( strncmp(zLine, "| end ", 6)==0 ){
       break;
     }
-    rc = sscanf(zLine,"| %d: %hhx %hhx %hhx %hhx %hhx %hhx %hhx %hhx"
-                      "  %hhx %hhx %hhx %hhx %hhx %hhx %hhx %hhx",
+    rc = sscanf(zLine,"| %d: %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x",
                 &j, &x[0], &x[1], &x[2], &x[3], &x[4], &x[5], &x[6], &x[7],
                 &x[8], &x[9], &x[10], &x[11], &x[12], &x[13], &x[14], &x[15]);
     if( rc==17 ){
       k = iOffset+j;
       if( k+16<=n ){
-        memcpy(a+k, x, 16);
+        int ii;
+        for(ii=0; ii<16; ii++) a[k+ii] = x[ii]&0xff;
       }
     }
   }
@@ -12946,10 +12947,7 @@ static int lintDotCommand(
   return SQLITE_ERROR;
 }
 
-#if !defined(SQLITE_OMIT_VIRTUALTABLE) && defined(SQLITE_HAVE_ZLIB)
-/*********************************************************************************
-** The ".archive" or ".ar" command.
-*/
+#if !defined SQLITE_OMIT_VIRTUALTABLE
 static void shellPrepare(
   sqlite3 *db, 
   int *pRc, 
@@ -13020,6 +13018,12 @@ static void shellReset(
     *pRc = rc;
   }
 }
+#endif /* !defined SQLITE_OMIT_VIRTUALTABLE */
+
+#if !defined(SQLITE_OMIT_VIRTUALTABLE) && defined(SQLITE_HAVE_ZLIB)
+/*********************************************************************************
+** The ".archive" or ".ar" command.
+*/
 /*
 ** Structure representing a single ".ar" command.
 */
@@ -14033,7 +14037,9 @@ static int do_meta_command(char *zLine, ShellState *p){
         zLike = azArg[i];
       }
     }
+
     open_db(p, 0);
+
     /* When playing back a "dump", the content might appear in an order
     ** which causes immediate foreign key constraints to be violated.
     ** So disable foreign-key constraint enforcement to prevent problems. */
@@ -14081,7 +14087,7 @@ static int do_meta_command(char *zLine, ShellState *p){
     }
     sqlite3_exec(p->db, "PRAGMA writable_schema=OFF;", 0, 0, 0);
     sqlite3_exec(p->db, "RELEASE dump;", 0, 0, 0);
-    raw_printf(p->out, p->nErr ? "ROLLBACK; -- due to errors\n" : "COMMIT;\n");
+    raw_printf(p->out, p->nErr?"ROLLBACK; -- due to errors\n":"COMMIT;\n");
     p->showHeader = savedShowHeader;
     p->shellFlgs = savedShellFlags;
   }else
