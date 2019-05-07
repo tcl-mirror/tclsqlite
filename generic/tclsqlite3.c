@@ -85,10 +85,14 @@
 # define Tcl_BackgroundException(interp, result) (DbUseNre()? \
     ((void (*)(Tcl_Interp *, int))((&(tclStubsPtr->tcl_PkgProvideEx))[609]))((interp), (result)): \
     ((void (*)(Tcl_Interp *))((&(tclStubsPtr->tcl_PkgProvideEx))[76]))(interp))
+#elif TCL_MAJOR_VERSION==8 && TCL_MINOR_VERSION<6
+# define Tcl_BackgroundException(interp, result) Tcl_BackgroundError(interp)
 #endif /* USE_TCL_STUBS */
 
 #if TCL_MAJOR_VERSION>8 || (TCL_MAJOR_VERSION==8 && TCL_MINOR_VERSION>=6)
 static int DbUseNre(void);
+#else
+# define DbUseNre() 0
 #endif
 
 /*
@@ -1827,7 +1831,6 @@ int DbUseNre(void){
 **   if( DbUseNre() ) { ... }
 */
 # define SQLITE_TCL_NRE 0
-# define DbUseNre() 0
 # define Tcl_NRAddCallback(a,b,c,d,e,f) (void)0
 # define Tcl_NREvalObj(a,b,c) 0
 # define Tcl_NRCreateCommand(a,b,c,d,e,f) (void)0
