@@ -631,7 +631,7 @@ static int DbBusyHandler(void *cd, int nTries){
   rc = Tcl_EvalEx(pDb->interp, Tcl_DStringValue(&dstring),
       Tcl_DStringLength(&dstring), TCL_EVAL_GLOBAL);
   Tcl_DStringFree(&dstring);
-  if( rc!=TCL_OK || atoi(Tcl_GetStringResult(pDb->interp)) ){
+  if( rc!=TCL_OK || atoi(Tcl_GetString(Tcl_GetObjResult(pDb->interp))) ){
     return 0;
   }
   return 1;
@@ -647,7 +647,7 @@ static int DbProgressHandler(void *cd){
 
   assert( pDb->zProgress );
   rc = Tcl_EvalEx(pDb->interp, pDb->zProgress, -1, 0);
-  if( rc!=TCL_OK || atoi(Tcl_GetStringResult(pDb->interp)) ){
+  if( rc!=TCL_OK || atoi(Tcl_GetString(Tcl_GetObjResult(pDb->interp))) ){
     return 1;
   }
   return 0;
@@ -793,7 +793,7 @@ static int DbCommitHandler(void *cd){
   int rc;
 
   rc = Tcl_EvalEx(pDb->interp, pDb->zCommit, -1, 0);
-  if( rc!=TCL_OK || atoi(Tcl_GetStringResult(pDb->interp)) ){
+  if( rc!=TCL_OK || atoi(Tcl_GetString(Tcl_GetObjResult(pDb->interp))) ){
     return 1;
   }
   return 0;
@@ -963,7 +963,7 @@ static int tclSqlCollate(
   Tcl_ListObjAppendElement(p->interp, pCmd, Tcl_NewStringObj(zB, nB));
   Tcl_EvalObjEx(p->interp, pCmd, TCL_EVAL_DIRECT);
   Tcl_DecrRefCount(pCmd);
-  return (atoi(Tcl_GetStringResult(p->interp)));
+  return (atoi(Tcl_GetString(Tcl_GetObjResult(p->interp))));
 }
 
 /*
@@ -998,7 +998,7 @@ static void tclSqlFunc(sqlite3_context *context, int argc, sqlite3_value**argv){
     Tcl_Obj **aArg;
     int nArg;
     if( Tcl_ListObjGetElements(p->interp, p->pScript, &nArg, &aArg) ){
-      sqlite3_result_error(context, Tcl_GetStringResult(p->interp), -1);
+      sqlite3_result_error(context, Tcl_GetString(Tcl_GetObjResult(p->interp)), -1);
       return;
     }
     pCmd = Tcl_NewListObj(nArg, aArg);
@@ -1037,7 +1037,7 @@ static void tclSqlFunc(sqlite3_context *context, int argc, sqlite3_value**argv){
       rc = Tcl_ListObjAppendElement(p->interp, pCmd, pVal);
       if( rc ){
         Tcl_DecrRefCount(pCmd);
-        sqlite3_result_error(context, Tcl_GetStringResult(p->interp), -1);
+        sqlite3_result_error(context, Tcl_GetString(Tcl_GetObjResult(p->interp)), -1);
         return;
       }
     }
@@ -1052,7 +1052,7 @@ static void tclSqlFunc(sqlite3_context *context, int argc, sqlite3_value**argv){
   }
 
   if( rc && rc!=TCL_RETURN ){
-    sqlite3_result_error(context, Tcl_GetStringResult(p->interp), -1);
+    sqlite3_result_error(context, Tcl_GetString(Tcl_GetObjResult(p->interp)), -1);
   }else{
     Tcl_Obj *pVar = Tcl_GetObjResult(p->interp);
     int n;
@@ -1193,7 +1193,7 @@ static int auth_callback(
 #endif
   rc = Tcl_EvalEx(pDb->interp, Tcl_DStringValue(&str), -1, TCL_EVAL_GLOBAL);
   Tcl_DStringFree(&str);
-  zReply = rc==TCL_OK ? Tcl_GetStringResult(pDb->interp) : "SQLITE_DENY";
+  zReply = rc==TCL_OK ? Tcl_GetString(Tcl_GetObjResult(pDb->interp)) : "SQLITE_DENY";
   if( strcmp(zReply,"SQLITE_OK")==0 ){
     rc = SQLITE_OK;
   }else if( strcmp(zReply,"SQLITE_DENY")==0 ){
@@ -4000,7 +4000,7 @@ int SQLITE_CDECL TCLSH_MAIN(int argc, char **argv){
   }
   if( Tcl_EvalEx(interp, zScript, -1, TCL_EVAL_GLOBAL)!=TCL_OK ){
     const char *zInfo = Tcl_GetVar2(interp, "errorInfo", NULL, TCL_GLOBAL_ONLY);
-    if( zInfo==0 ) zInfo = Tcl_GetStringResult(interp);
+    if( zInfo==0 ) zInfo = Tcl_GetString(Tcl_GetObjResult(interp));
     fprintf(stderr,"%s: %s\n", *argv, zInfo);
     return 1;
   }
