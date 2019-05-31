@@ -541,7 +541,7 @@ proc autovacuum_overhead {filePages pageSize} {
   set ptrsPerPage [expr {double($pageSize/5)}]
 
   # Return the number of pointer map pages in the database.
-  return [expr {wide(ceil( ($filePages-1.0)/($ptrsPerPage+1.0)))}]
+  return [expr {wide(ceil(($filePages-1.0)/($ptrsPerPage+1.0)))}]
 }
 
 
