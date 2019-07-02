@@ -267,7 +267,7 @@ static void closeIncrblobChannels(SqliteDb *pDb){
 ** Close an incremental blob channel.
 */
 static int SQLITE_TCLAPI incrblobClose(
-  ClientData instanceData,
+  void *instanceData,
   Tcl_Interp *interp
 ){
   IncrblobChannel *p = (IncrblobChannel *)instanceData;
@@ -299,7 +299,7 @@ static int SQLITE_TCLAPI incrblobClose(
 ** Read data from an incremental blob channel.
 */
 static int SQLITE_TCLAPI incrblobInput(
-  ClientData instanceData,
+  void *instanceData,
   char *buf,
   int bufSize,
   int *errorCodePtr
@@ -331,7 +331,7 @@ static int SQLITE_TCLAPI incrblobInput(
 ** Write data to an incremental blob channel.
 */
 static int SQLITE_TCLAPI incrblobOutput(
-  ClientData instanceData,
+  void *instanceData,
   const char *buf,
   int toWrite,
   int *errorCodePtr
@@ -364,7 +364,7 @@ static int SQLITE_TCLAPI incrblobOutput(
 ** Seek an incremental blob channel.
 */
 static int SQLITE_TCLAPI incrblobSeek(
-  ClientData instanceData,
+  void *instanceData,
   long offset,
   int seekMode,
   int *errorCodePtr
@@ -390,15 +390,15 @@ static int SQLITE_TCLAPI incrblobSeek(
 
 
 static void SQLITE_TCLAPI incrblobWatch(
-  ClientData instanceData,
+  void *instanceData,
   int mode
 ){
   /* NO-OP */
 }
 static int SQLITE_TCLAPI incrblobHandle(
-  ClientData instanceData,
+  void *instanceData,
   int dir,
-  ClientData *hPtr
+  void **hPtr
 ){
   return TCL_ERROR;
 }
@@ -1264,7 +1264,7 @@ static char *local_getline(char *zPrompt, FILE *in){
 ** the transaction or savepoint opened by the [transaction] command.
 */
 static int SQLITE_TCLAPI DbTransPostCmd(
-  ClientData data[],                   /* data[0] is the Sqlite3Db* for $db */
+  void *data[],                        /* data[0] is the Sqlite3Db* for $db */
   Tcl_Interp *interp,                  /* Tcl interpreter */
   int result                           /* Result of evaluating SCRIPT */
 ){
@@ -1842,7 +1842,7 @@ int DbUseNre(void){
 **   $db eval SQL ?ARRAYNAME? SCRIPT
 */
 static int SQLITE_TCLAPI DbEvalNextCmd(
-  ClientData data[],                   /* data[0] is the (DbEvalContext*) */
+  void *data[],                        /* data[0] is the (DbEvalContext*) */
   Tcl_Interp *interp,                  /* Tcl interpreter */
   int result                           /* Result so far */
 ){
@@ -2772,7 +2772,7 @@ deserialize_error:
       }
       Tcl_DecrRefCount(pRet);
     }else{
-      ClientData cd2[2];
+      void *cd2[2];
       DbEvalContext *p;
       Tcl_Obj *pArray = 0;
       Tcl_Obj *pScript;
