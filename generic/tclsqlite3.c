@@ -959,8 +959,8 @@ static int tclSqlCollate(
 
   pCmd = Tcl_NewStringObj(p->zScript, -1);
   Tcl_IncrRefCount(pCmd);
-  Tcl_ListObjAppendElement(p->interp, pCmd, Tcl_NewStringObj(zA, nA));
-  Tcl_ListObjAppendElement(p->interp, pCmd, Tcl_NewStringObj(zB, nB));
+  Tcl_ListObjAppendElement(p->interp, pCmd, Tcl_NewStringObj((const char *)zA, nA));
+  Tcl_ListObjAppendElement(p->interp, pCmd, Tcl_NewStringObj((const char *)zB, nB));
   Tcl_EvalObjEx(p->interp, pCmd, TCL_EVAL_DIRECT);
   Tcl_DecrRefCount(pCmd);
   return (atoi(Tcl_GetString(Tcl_GetObjResult(p->interp))));
@@ -971,7 +971,7 @@ static int tclSqlCollate(
 ** using TCL script.
 */
 static void tclSqlFunc(sqlite3_context *context, int argc, sqlite3_value**argv){
-  SqlFunc *p = sqlite3_user_data(context);
+  SqlFunc *p = (SqlFunc*)sqlite3_user_data(context);
   Tcl_Obj *pCmd;
   int i;
   int rc;
@@ -1011,7 +1011,7 @@ static void tclSqlFunc(sqlite3_context *context, int argc, sqlite3_value**argv){
       switch( sqlite3_value_type(pIn) ){
         case SQLITE_BLOB: {
           int bytes = sqlite3_value_bytes(pIn);
-          pVal = Tcl_NewByteArrayObj(sqlite3_value_blob(pIn), bytes);
+          pVal = Tcl_NewByteArrayObj((const unsigned char*)sqlite3_value_blob(pIn), bytes);
           break;
         }
         case SQLITE_INTEGER: {
@@ -1787,7 +1787,7 @@ static Tcl_Obj *dbEvalColumnValue(DbEvalContext *p, int iCol){
   switch( sqlite3_column_type(pStmt, iCol) ){
     case SQLITE_BLOB: {
       int bytes = sqlite3_column_bytes(pStmt, iCol);
-      const char *zBlob = sqlite3_column_blob(pStmt, iCol);
+      const char *zBlob = (const char *)sqlite3_column_blob(pStmt, iCol);
       if( !zBlob ) bytes = 0;
       return Tcl_NewByteArrayObj((u8*)zBlob, bytes);
     }
@@ -2474,7 +2474,7 @@ static int SQLITE_TCLAPI DbObjCmd(
     if( nCol==0 ) {
       return TCL_ERROR;
     }
-    zSql = sqlite3_malloc( nByte + 50 + nCol*2 );
+    zSql = (char *)sqlite3_malloc( nByte + 50 + nCol*2 );
     if( zSql==0 ) {
       Tcl_AppendResult(interp, "Error: can't malloc()", (char*)0);
       return TCL_ERROR;
@@ -2500,7 +2500,7 @@ static int SQLITE_TCLAPI DbObjCmd(
       sqlite3_finalize(pStmt);
       return TCL_ERROR;
     }
-    azCol = sqlite3_malloc( sizeof(azCol[0])*(nCol+1) );
+    azCol = (char **)sqlite3_malloc( sizeof(azCol[0])*(nCol+1) );
     if( azCol==0 ) {
       Tcl_AppendResult(interp, "Error: can't malloc()", (char*)0);
       Tcl_Close(interp, in);
@@ -2527,7 +2527,7 @@ static int SQLITE_TCLAPI DbObjCmd(
       if( i+1!=nCol ){
         char *zErr;
         int nErr = strlen30(zFile) + 200;
-        zErr = sqlite3_malloc(nErr);
+        zErr = (char *)sqlite3_malloc(nErr);
         if( zErr ){
           sqlite3_snprintf(nErr, zErr,
              "Error: %s line %d: expected %d columns of data but found %d",
@@ -3869,6 +3869,9 @@ static const char *Tcl_InitStubs(Tcl_Interp *interp, const char *version, int ex
 **
 ** The DLLEXPORT macros are required by TCL in order to work on windows.
 */
+#ifdef __cplusplus
+extern "C" {
+#endif  /* __cplusplus */
 DLLEXPORT int Sqlite3_Init(Tcl_Interp *interp){
   int rc = Tcl_InitStubs(interp, "8.5-", 0) ? TCL_OK : TCL_ERROR;
   if( rc!=TCL_OK ){
@@ -3905,6 +3908,9 @@ int Tclsqlite_Init(Tcl_Interp *interp){ return Sqlite3_Init(interp); }
 int Sqlite_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
 int Tclsqlite_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
 #endif
+#ifdef __cplusplus
+}
+#endif  /* __cplusplus */
 
 /*
 ** If the TCLSH macro is defined, add code to make a stand-alone program.
