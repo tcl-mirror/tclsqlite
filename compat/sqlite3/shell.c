@@ -646,7 +646,7 @@ static int hexDigitValue(char c){
 */
 static sqlite3_int64 integerValue(const char *zArg){
   sqlite3_int64 v = 0;
-  static const struct { char *zSuffix; int iMult; } aMult[] = {
+  static const struct { const char zSuffix[4]; int iMult; } aMult[] = {
     { "KiB", 1024 },
     { "MiB", 1024*1024 },
     { "GiB", 1024*1024*1024 },
@@ -782,7 +782,7 @@ static char *shellFakeSchema(
   char *zSql;
   ShellText s;
   char cQuote;
-  char *zDiv = "(";
+  const char *zDiv = "(";
   int nRow = 0;
 
   zSql = sqlite3_mprintf("PRAGMA \"%w\".table_info=%Q;",
@@ -9431,7 +9431,7 @@ static int dbdataRowid(sqlite3_vtab_cursor *pCursor, sqlite_int64 *pRowid){
 ** Invoke this routine to register the "sqlite_dbdata" virtual table module
 */
 static int sqlite3DbdataRegister(sqlite3 *db){
-  static sqlite3_module dbdata_module = {
+  static const sqlite3_module dbdata_module = {
     0,                            /* iVersion */
     0,                            /* xCreate */
     dbdataConnect,                /* xConnect */
@@ -10353,8 +10353,8 @@ static int progress_handler(void *pClientData) {
 static int shell_callback(
   void *pArg,
   int nArg,        /* Number of result columns */
-  char **azArg,    /* Text of each result column */
-  char **azCol,    /* Column names */
+  const char **azArg,/* Text of each result column */
+  const char **azCol,/* Column names */
   int *aiType      /* Column types */
 ){
   int i;
@@ -10381,7 +10381,7 @@ static int shell_callback(
       static const int aExplainWidths[] = {4, 13, 4, 4, 4, 13, 2, 13};
       const int *colWidth;
       int showHdr;
-      char *rowSep;
+      const char *rowSep;
       if( p->cMode==MODE_Column ){
         colWidth = p->colWidth;
         showHdr = p->showHeader;
@@ -10529,7 +10529,7 @@ static int shell_callback(
       }
       if( azArg==0 ) break;
       for(i=0; i<nArg; i++){
-        char *z = azArg[i];
+        const char *z = azArg[i];
         if( z==0 ) z = p->nullValue;
         utf8_printf(p->out, "%s", z);
         if( i<nArg-1 ){
@@ -10717,7 +10717,7 @@ static int shell_callback(
 */
 static int callback(void *pArg, int nArg, char **azArg, char **azCol){
   /* since we don't have type info, call the shell_callback with a NULL value */
-  return shell_callback(pArg, nArg, azArg, azCol, NULL);
+  return shell_callback(pArg, nArg, (const char **)azArg, (const char **)azCol, NULL);
 }
 
 /*
@@ -10929,8 +10929,8 @@ static void displayLinuxIoStats(FILE *out){
 */
 static void displayStatLine(
   ShellState *p,            /* The shell context */
-  char *zLabel,             /* Label for this one line */
-  char *zFormat,            /* Format for the result */
+  const char *zLabel,       /* Label for this one line */
+  const char *zFormat,      /* Format for the result */
   int iStatusCtrl,          /* Which status to display */
   int bReset                /* True to reset the stats */
 ){
@@ -11362,14 +11362,14 @@ static void exec_prepared_stmt(
     if( !pData ){
       rc = SQLITE_NOMEM;
     }else{
-      char **azCols = (char **)pData;      /* Names of result columns */
-      char **azVals = &azCols[nCol];       /* Results */
+      const char **azCols = (const char **)pData;/* Names of result columns */
+      const char **azVals = &azCols[nCol];       /* Results */
       int *aiTypes = (int *)&azVals[nCol]; /* Result types */
       int i, x;
       assert(sizeof(int) <= sizeof(char *));
       /* save off ptrs to column names */
       for(i=0; i<nCol; i++){
-        azCols[i] = (char *)sqlite3_column_name(pStmt, i);
+        azCols[i] = sqlite3_column_name(pStmt, i);
       }
       do{
         /* extract the data and data types */
@@ -11378,7 +11378,7 @@ static void exec_prepared_stmt(
           if( x==SQLITE_BLOB && pArg && pArg->cMode==MODE_Insert ){
             azVals[i] = "";
           }else{
-            azVals[i] = (char*)sqlite3_column_text(pStmt, i);
+            azVals[i] = (const char *)sqlite3_column_text(pStmt, i);
           }
           if( !azVals[i] && (aiTypes[i]!=SQLITE_NULL) ){
             rc = SQLITE_NOMEM;
@@ -11787,7 +11787,7 @@ static char **tableColumnList(ShellState *p, const char *zTab){
   if( preserveRowid ){
     /* Only preserve the rowid if we can find a name to use for the
     ** rowid */
-    static char *azRowid[] = { "rowid", "_rowid_", "oid" };
+    static const char *const azRowid[] = { "rowid", "_rowid_", "oid" };
     int i, j;
     for(j=0; j<3; j++){
       for(i=1; i<=nCol; i++){
@@ -11799,7 +11799,7 @@ static char **tableColumnList(ShellState *p, const char *zTab){
         ** name for the rowid before adding it to azCol[0].  WITHOUT ROWID
         ** tables will fail this last check */
         rc = sqlite3_table_column_metadata(p->db,0,zTab,azRowid[j],0,0,0,0,0);
-        if( rc==SQLITE_OK ) azCol[0] = azRowid[j];
+        if( rc==SQLITE_OK ) azCol[0] = (char *)azRowid[j];
         break;
       }
     }
@@ -12421,6 +12421,8 @@ static unsigned char *readHexDb(ShellState *p, size_t *pnData){
   rc = sscanf(zLine, "| size %d pagesize %d", &n, &pgsz);
   if( rc!=2 ) goto readHexDb_error;
   if( n<0 ) goto readHexDb_error;
+  if( pgsz<512 || pgsz>65536 || (pgsz&(pgsz-1))!=0 ) goto readHexDb_error;
+  n = (n+pgsz-1)&~(pgsz-1);  /* Round n up to the next multiple of pgsz */
   a = sqlite3_malloc( n ? n : 1 );
   if( a==0 ){
     utf8_printf(stderr, "Out of memory!\n");
@@ -12548,9 +12550,9 @@ static void shellEscapeCrnl(
 
     if( zNL || zCR ){
       int iOut = 0;
-      i64 nMax = (nNL > nCR) ? nNL : nCR;
-      i64 nAlloc = nMax * nText + (nMax+64)*2;
-      char *zOut = (char*)sqlite3_malloc64(nAlloc);
+      size_t nMax = (nNL > nCR) ? nNL : nCR;
+      size_t nAlloc = nMax * nText + (nMax+64)*2;
+      char *zOut = (char*)sqlite3_malloc(nAlloc);
       if( zOut==0 ){
         sqlite3_result_error_nomem(context);
         return;
@@ -13450,7 +13452,7 @@ static int shell_dbinfo_command(ShellState *p, int nArg, char **azArg){
   int i, rc;
   unsigned iDataVersion;
   char *zSchemaTab;
-  char *zDb = nArg>=2 ? azArg[1] : "main";
+  const char *zDb = nArg>=2 ? azArg[1] : "main";
   sqlite3_stmt *pStmt = 0;
   unsigned char aHdr[100];
   open_db(p, 0);
@@ -14767,7 +14769,7 @@ static void shellExecPrintf(sqlite3 *db, int *pRc, const char *zFmt, ...){
 static void *shellMalloc(int *pRc, sqlite3_int64 nByte){
   void *pRet = 0;
   if( *pRc==SQLITE_OK ){
-    pRet = sqlite3_malloc64(nByte);
+    pRet = sqlite3_malloc(nByte);
     if( pRet==0 ){
       *pRc = SQLITE_NOMEM;
     }else{
@@ -15558,7 +15560,7 @@ static int do_meta_command(char *zLine, ShellState *p){
     if( nArg!=2 ){
       raw_printf(stderr, "Usage: .check GLOB-PATTERN\n");
       rc = 2;
-    }else if( (zRes = readFile("testcase-out.txt", NULL))==0 ){
+    }else if( (zRes = readFile("testcase-out.txt", 0))==0 ){
       raw_printf(stderr, "Error: cannot read 'testcase-out.txt'\n");
       rc = 2;
     }else if( testcase_glob(azArg[1],zRes)==0 ){
@@ -15978,11 +15980,11 @@ static int do_meta_command(char *zLine, ShellState *p){
       sqlite3_exec(p->db, "SELECT 'ANALYZE sqlite_master'",
                    callback, &data, &zErrMsg);
       data.cMode = data.mode = MODE_Insert;
-      data.zDestTable = "sqlite_stat1";
+      data.zDestTable = (char *)"sqlite_stat1";
       shell_exec(&data, "SELECT * FROM sqlite_stat1", &zErrMsg);
-      data.zDestTable = "sqlite_stat3";
+      data.zDestTable = (char *)"sqlite_stat3";
       shell_exec(&data, "SELECT * FROM sqlite_stat3", &zErrMsg);
-      data.zDestTable = "sqlite_stat4";
+      data.zDestTable = (char *)"sqlite_stat4";
       shell_exec(&data, "SELECT * FROM sqlite_stat4", &zErrMsg);
       raw_printf(p->out, "ANALYZE sqlite_master;\n");
     }
@@ -16526,8 +16528,8 @@ static int do_meta_command(char *zLine, ShellState *p){
     if( azArg[0][0]=='e' ){
       /* Transform the ".excel" command into ".once -x" */
       nArg = 2;
-      azArg[0] = "once";
-      zFile = azArg[1] = "-x";
+      azArg[0] = (char *)"once";
+      zFile = azArg[1] = (char *)"-x";
       n = 4;
     }
     if( nArg>2 ){
@@ -16892,7 +16894,7 @@ static int do_meta_command(char *zLine, ShellState *p){
                       "  sql text\n"
                       ")", isMaster ? "sqlite_master" : "sqlite_temp_master");
         new_argv[1] = 0;
-        new_colv[0] = "sql";
+        new_colv[0] = (char *)"sql";
         new_colv[1] = 0;
         callback(&data, 1, new_argv, new_colv);
         sqlite3_free(new_argv[0]);
@@ -16918,7 +16920,7 @@ static int do_meta_command(char *zLine, ShellState *p){
         zDiv = " UNION ALL ";
         appendText(&sSelect, "SELECT shell_add_schema(sql,", 0);
         if( sqlite3_stricmp(zDb, "main")!=0 ){
-          appendText(&sSelect, zDb, '"');
+          appendText(&sSelect, zDb, '\'');
         }else{
           appendText(&sSelect, "NULL", 0);
         }
@@ -16927,7 +16929,7 @@ static int do_meta_command(char *zLine, ShellState *p){
         appendText(&sSelect, " AS snum, ", 0);
         appendText(&sSelect, zDb, '\'');
         appendText(&sSelect, " AS sname FROM ", 0);
-        appendText(&sSelect, zDb, '"');
+        appendText(&sSelect, zDb, quoteChar(zDb));
         appendText(&sSelect, ".sqlite_master", 0);
       }
       sqlite3_finalize(pStmt);
@@ -17332,7 +17334,7 @@ static int do_meta_command(char *zLine, ShellState *p){
     int bDebug = 0;          /* Only show the query that would have run */
     sqlite3_stmt *pStmt;     /* For querying tables names */
     char *zSql;              /* SQL to be run */
-    char *zSep;              /* Separator */
+    const char *zSep;        /* Separator */
     ShellText sSql;          /* Complete SQL for the query to run the hash */
     ShellText sQuery;        /* Set of queries used to read all content */
     open_db(p, 0);
@@ -17371,12 +17373,12 @@ static int do_meta_command(char *zLine, ShellState *p){
       }
     }
     if( bSchema ){
-      zSql = "SELECT lower(name) FROM sqlite_master"
+      zSql = (char *)"SELECT lower(name) FROM sqlite_master"
              " WHERE type='table' AND coalesce(rootpage,0)>1"
              " UNION ALL SELECT 'sqlite_master'"
              " ORDER BY 1 collate nocase";
     }else{
-      zSql = "SELECT lower(name) FROM sqlite_master"
+      zSql = (char *)"SELECT lower(name) FROM sqlite_master"
              " WHERE type='table' AND coalesce(rootpage,0)>1"
              " AND name NOT LIKE 'sqlite_%'"
              " ORDER BY 1 collate nocase";
@@ -17602,7 +17604,7 @@ static int do_meta_command(char *zLine, ShellState *p){
       nPrintRow = (nRow + nPrintCol - 1)/nPrintCol;
       for(i=0; i<nPrintRow; i++){
         for(j=i; j<nRow; j+=nPrintRow){
-          char *zSp = j<nPrintRow ? "" : "  ";
+          const char *zSp = j<nPrintRow ? "" : "  ";
           utf8_printf(p->out, "%s%-*s", zSp, maxlen,
                       azResult[j] ? azResult[j]:"");
         }
