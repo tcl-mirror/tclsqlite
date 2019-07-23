@@ -9801,12 +9801,12 @@ static void editFunc(
   }
   sz = sqlite3_value_bytes(argv[0]);
   if( bBin ){
-    x = fwrite(sqlite3_value_blob(argv[0]), 1, sz, f);
+    x = fwrite(sqlite3_value_blob(argv[0]), 1, (size_t)sz, f);
   }else{
     const char *z = (const char*)sqlite3_value_text(argv[0]);
     /* Remember whether or not the value originally contained \r\n */
     if( z && strstr(z,"\r\n")!=0 ) hasCRNL = 1;
-    x = fwrite(sqlite3_value_text(argv[0]), 1, sz, f);
+    x = fwrite(sqlite3_value_text(argv[0]), 1, (size_t)sz, f);
   }
   fclose(f);
   f = 0;
@@ -9839,7 +9839,7 @@ static void editFunc(
     sqlite3_result_error_nomem(context);
     goto edit_func_end;
   }
-  x = fread(p, 1, sz, f);
+  x = fread(p, 1, (size_t)sz, f);
   fclose(f);
   f = 0;
   if( x!=sz ){
@@ -12436,6 +12436,8 @@ static unsigned char *readHexDb(ShellState *p, int *pnData){
   rc = sscanf(zLine, "| size %d pagesize %d", &n, &pgsz);
   if( rc!=2 ) goto readHexDb_error;
   if( n<0 ) goto readHexDb_error;
+  if( pgsz<512 || pgsz>65536 || (pgsz&(pgsz-1))!=0 ) goto readHexDb_error;
+  n = (n+pgsz-1)&~(pgsz-1);  /* Round n up to the next multiple of pgsz */
   a = sqlite3_malloc( n ? n : 1 );
   if( a==0 ){
     utf8_printf(stderr, "Out of memory!\n");
@@ -16933,7 +16935,7 @@ static int do_meta_command(char *zLine, ShellState *p){
         zDiv = " UNION ALL ";
         appendText(&sSelect, "SELECT shell_add_schema(sql,", 0);
         if( sqlite3_stricmp(zDb, "main")!=0 ){
-          appendText(&sSelect, zDb, '"');
+          appendText(&sSelect, zDb, '\'');
         }else{
           appendText(&sSelect, "NULL", 0);
         }
@@ -16942,7 +16944,7 @@ static int do_meta_command(char *zLine, ShellState *p){
         appendText(&sSelect, " AS snum, ", 0);
         appendText(&sSelect, zDb, '\'');
         appendText(&sSelect, " AS sname FROM ", 0);
-        appendText(&sSelect, zDb, '"');
+        appendText(&sSelect, zDb, quoteChar(zDb));
         appendText(&sSelect, ".sqlite_master", 0);
       }
       sqlite3_finalize(pStmt);
