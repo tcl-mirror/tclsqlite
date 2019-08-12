@@ -12508,6 +12508,23 @@ static void shellInt32(
 }
 
 /*
+** Scalar function "shell_idquote(X)" returns string X quoted as an identifier,
+** using "..." with internal double-quote characters doubled.
+*/
+static void shellIdQuote(
+  sqlite3_context *context, 
+  int argc, 
+  sqlite3_value **argv
+){
+  const char *zName = (const char*)sqlite3_value_text(argv[0]);
+  UNUSED_PARAMETER(argc);
+  if( zName ){
+    char *z = sqlite3_mprintf("\"%w\"", zName);
+    sqlite3_result_text(context, z, -1, sqlite3_free);
+  }
+}
+
+/*
 ** Scalar function "shell_escape_crnl" used by the .recover command.
 ** The argument passed to this function is the output of built-in
 ** function quote(). If the first character of the input is "'", 
@@ -12683,6 +12700,8 @@ static void open_db(ShellState *p, int openFlags){
                             shellEscapeCrnl, 0, 0);
     sqlite3_create_function(p->db, "shell_int32", 2, SQLITE_UTF8, 0,
                             shellInt32, 0, 0);
+    sqlite3_create_function(p->db, "shell_idquote", 1, SQLITE_UTF8, 0,
+                            shellIdQuote, 0, 0);
 #ifndef SQLITE_NOHAVE_SYSTEM
     sqlite3_create_function(p->db, "edit", 1, SQLITE_UTF8, 0,
                             editFunc, 0, 0);
@@ -14861,6 +14880,10 @@ static RecoverTable *recoverNewTable(
     
     rc = sqlite3_open("", &dbtmp);
     if( rc==SQLITE_OK ){
+      sqlite3_create_function(dbtmp, "shell_idquote", 1, SQLITE_UTF8, 0,
+                              shellIdQuote, 0, 0);
+    }
+    if( rc==SQLITE_OK ){
       rc = sqlite3_exec(dbtmp, "PRAGMA writable_schema = on", 0, 0, 0);
     }
     if( rc==SQLITE_OK ){
@@ -14916,18 +14939,18 @@ static RecoverTable *recoverNewTable(
         }
       }
 
-      pTab->zQuoted = shellMPrintf(&rc, "%Q", zName);
+      pTab->zQuoted = shellMPrintf(&rc, "\"%w\"", zName);
       pTab->azlCol = (char**)shellMalloc(&rc, sizeof(char*) * (nSqlCol+1));
       pTab->nCol = nSqlCol;
 
       if( bIntkey ){
-        pTab->azlCol[0] = shellMPrintf(&rc, "%Q", zPk);
+        pTab->azlCol[0] = shellMPrintf(&rc, "\"%w\"", zPk);
       }else{
         pTab->azlCol[0] = shellMPrintf(&rc, "");
       }
       i = 1;
       shellPreparePrintf(dbtmp, &rc, &pStmt, 
-          "SELECT %Q || group_concat(name, ', ') "
+          "SELECT %Q || group_concat(shell_idquote(name), ', ') "
           "  FILTER (WHERE cid!=%d) OVER (ORDER BY %s cid) "
           "FROM pragma_table_info(%Q)", 
           bIntkey ? ", " : "", pTab->iPk, 
@@ -15041,7 +15064,7 @@ static RecoverTable *recoverOrphanTable(
 
     pTab = (RecoverTable*)shellMalloc(pRc, sizeof(RecoverTable));
     if( pTab ){
-      pTab->zQuoted = shellMPrintf(pRc, "%Q", zTab);
+      pTab->zQuoted = shellMPrintf(pRc, "\"%w\"", zTab);
       pTab->nCol = nCol;
       pTab->iPk = -2;
       if( nCol>0 ){
@@ -15119,6 +15142,7 @@ static int recoverDatabaseCmd(ShellState *pState, int nArg, char **azArg){
   shellExecPrintf(pState->db, &rc,
     /* Attach an in-memory database named 'recovery'. Create an indexed 
     ** cache of the sqlite_dbptr virtual table. */
+    "PRAGMA writable_schema = on;"
     "ATTACH %Q AS recovery;"
     "DROP TABLE IF EXISTS recovery.dbptr;"
     "DROP TABLE IF EXISTS recovery.freelist;"
@@ -15148,6 +15172,21 @@ static int recoverDatabaseCmd(ShellState *pState, int nArg, char **azArg){
       "REPLACE INTO recovery.freelist SELECT freepgno FROM freelist;"
     );
   }
+
+  /* If this is an auto-vacuum database, add all pointer-map pages to
+  ** the freelist table. Do this regardless of whether or not 
+  ** --freelist-corrupt was specified.  */
+  shellExec(pState->db, &rc, 
+    "WITH ptrmap(pgno) AS ("
+    "  SELECT 2 WHERE shell_int32("
+    "    (SELECT data FROM sqlite_dbpage WHERE pgno=1), 13"
+    "  )"
+    "    UNION ALL "
+    "  SELECT pgno+1+(SELECT page_size FROM pragma_page_size)/5 AS pp "
+    "  FROM ptrmap WHERE pp<=(SELECT page_count FROM pragma_page_count)"
+    ")"
+    "REPLACE INTO recovery.freelist SELECT pgno FROM ptrmap"
+  );
 
   shellExec(pState->db, &rc, 
     "CREATE TABLE recovery.dbptr("
@@ -15222,6 +15261,11 @@ static int recoverDatabaseCmd(ShellState *pState, int nArg, char **azArg){
   ** CREATE TABLE statements that extracted from the existing schema.  */
   if( rc==SQLITE_OK ){
     sqlite3_stmt *pStmt = 0;
+    /* ".recover" might output content in an order which causes immediate
+    ** foreign key constraints to be violated. So disable foreign-key
+    ** constraint enforcement to prevent problems when running the output
+    ** script. */
+    raw_printf(pState->out, "PRAGMA foreign_keys=OFF;\n");
     raw_printf(pState->out, "BEGIN;\n");
     raw_printf(pState->out, "PRAGMA writable_schema = on;\n");
     shellPrepare(pState->db, &rc,
@@ -15254,6 +15298,7 @@ static int recoverDatabaseCmd(ShellState *pState, int nArg, char **azArg){
   );
   shellPrepare(pState->db, &rc,
       "SELECT max(field), group_concat(shell_escape_crnl(quote(value)), ', ')"
+      ", min(field) "
       "FROM sqlite_dbdata WHERE pgno = ? AND field != ?"
       "GROUP BY cell", &pCells
   );
@@ -15272,6 +15317,7 @@ static int recoverDatabaseCmd(ShellState *pState, int nArg, char **azArg){
     int bNoop = 0;
     RecoverTable *pTab;
 
+    assert( bIntkey==0 || bIntkey==1 );
     pTab = recoverFindTable(pState, &rc, iRoot, bIntkey, nCol, &bNoop);
     if( bNoop || rc ) continue;
     if( pTab==0 ){
@@ -15282,7 +15328,7 @@ static int recoverDatabaseCmd(ShellState *pState, int nArg, char **azArg){
       if( pTab==0 ) break;
     }
 
-    if( 0==sqlite3_stricmp(pTab->zQuoted, "'sqlite_sequence'") ){
+    if( 0==sqlite3_stricmp(pTab->zQuoted, "\"sqlite_sequence\"") ){
       raw_printf(pState->out, "DELETE FROM sqlite_sequence;\n");
     }
     sqlite3_bind_int(pPages, 1, iRoot);
@@ -15293,18 +15339,28 @@ static int recoverDatabaseCmd(ShellState *pState, int nArg, char **azArg){
       sqlite3_bind_int(pCells, 1, iPgno);
       while( rc==SQLITE_OK && SQLITE_ROW==sqlite3_step(pCells) ){
         int nField = sqlite3_column_int(pCells, 0);
+        int iMin = sqlite3_column_int(pCells, 2);
         const char *zVal = (const char*)sqlite3_column_text(pCells, 1);
 
+        RecoverTable *pTab2 = pTab;
+        if( pTab!=pOrphan && (iMin<0)!=bIntkey ){
+          if( pOrphan==0 ){
+            pOrphan = recoverOrphanTable(pState, &rc, zLostAndFound, nOrphan);
+          }
+          pTab2 = pOrphan;
+          if( pTab2==0 ) break;
+        }
+
         nField = nField+1;
-        if( pTab==pOrphan ){
+        if( pTab2==pOrphan ){
           raw_printf(pState->out, 
               "INSERT INTO %s VALUES(%d, %d, %d, %s%s%s);\n",
-              pTab->zQuoted, iRoot, iPgno, nField, 
-              bIntkey ? "" : "NULL, ", zVal, pTab->azlCol[nField]
+              pTab2->zQuoted, iRoot, iPgno, nField,
+              iMin<0 ? "" : "NULL, ", zVal, pTab2->azlCol[nField]
           );
         }else{
           raw_printf(pState->out, "INSERT INTO %s(%s) VALUES( %s );\n", 
-              pTab->zQuoted, pTab->azlCol[nField], zVal
+              pTab2->zQuoted, pTab2->azlCol[nField], zVal
           );
         }
       }
