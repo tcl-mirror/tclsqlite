@@ -1815,7 +1815,7 @@ static Tcl_Obj *dbEvalColumnValue(DbEvalContext *p, int iCol){
 */
 #if TCL_MAJOR_VERSION>8 || (TCL_MAJOR_VERSION==8 && TCL_MINOR_VERSION>=6)
 # define SQLITE_TCL_NRE 1
-int DbUseNre(void){
+static int DbUseNre(void){
   int major, minor;
   Tcl_GetVersion(&major, &minor, 0, 0);
   return( (major==8 && minor>=6) || major>8 );
@@ -3986,7 +3986,7 @@ int SQLITE_CDECL TCLSH_MAIN(int argc, char **argv){
   sqlite3_shutdown();
 
   Tcl_FindExecutable(argv[0]);
-  Tcl_SetSystemEncoding(0, "utf-8");
+  Tcl_SetSystemEncoding(NULL, "utf-8");
   interp = Tcl_CreateInterp();
   Sqlite3_Init(interp);
 
