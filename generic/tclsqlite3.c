@@ -1068,7 +1068,7 @@ static void tclSqlFunc(sqlite3_context *context, int argc, sqlite3_value**argv){
         ** has no string representation. */
         eType = SQLITE_BLOB;
       }else if( (c=='b' && ((strcmp(zType,"boolean")==0)
-             || (strcmp(zType,"booleanString")==0)))
+             || (strcmp(zType,"booleanString")==0)) && pVar->bytes==0 )
              || (c=='w' && strcmp(zType,"wideInt")==0)
              || (c=='i' && strcmp(zType,"int")==0) 
       ){
@@ -1483,7 +1483,7 @@ static int dbPrepareAndBind(
           Tcl_IncrRefCount(pVar);
           pPreStmt->apParm[iParm++] = pVar;
         }else if( c=='b' && (strcmp(zType,"boolean")==0 ||
-              strcmp(zType,"booleanString")==0) ){
+              strcmp(zType,"booleanString")==0) && pVar->bytes==0){
           Tcl_GetBooleanFromObj(interp, pVar, &n);
           sqlite3_bind_int(pStmt, i, n);
         }else if( c=='d' && strcmp(zType,"double")==0 ){
