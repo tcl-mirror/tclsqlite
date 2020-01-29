@@ -222,7 +222,7 @@ struct SqliteDb {
 struct IncrblobChannel {
   sqlite3_blob *pBlob;      /* sqlite3 blob handle */
   SqliteDb *pDb;            /* Associated database connection */
-  int iSeek;                /* Current seek offset */
+  Tcl_WideInt iSeek;        /* Current seek offset */
   Tcl_Channel channel;      /* Channel identifier */
   IncrblobChannel *pNext;   /* Linked list of all open incrblob channels */
   IncrblobChannel *pPrev;   /* Linked list of all open incrblob channels */
@@ -305,7 +305,7 @@ static int SQLITE_TCLAPI incrblobInput(
   int *errorCodePtr
 ){
   IncrblobChannel *p = (IncrblobChannel *)instanceData;
-  int nRead = bufSize;         /* Number of bytes to read */
+  Tcl_WideInt nRead = bufSize; /* Number of bytes to read */
   int nBlob;                   /* Total size of the blob */
   int rc;                      /* sqlite error code */
 
@@ -363,6 +363,31 @@ static int SQLITE_TCLAPI incrblobOutput(
 /*
 ** Seek an incremental blob channel.
 */
+static Tcl_WideInt SQLITE_TCLAPI incrblobWideSeek(
+  void *instanceData,
+  Tcl_WideInt offset,
+  int seekMode,
+  int *errorCodePtr
+){
+  IncrblobChannel *p = (IncrblobChannel *)instanceData;
+
+  switch( seekMode ){
+    case SEEK_SET:
+      p->iSeek = offset;
+      break;
+    case SEEK_CUR:
+      p->iSeek += offset;
+      break;
+    case SEEK_END:
+      p->iSeek = sqlite3_blob_bytes(p->pBlob) + offset;
+      break;
+
+    default: assert(!"Bad seekMode");
+  }
+
+  return p->iSeek;
+}
+
 static int SQLITE_TCLAPI incrblobSeek(
   void *instanceData,
   long offset,
@@ -405,7 +430,7 @@ static int SQLITE_TCLAPI incrblobHandle(
 
 static Tcl_ChannelType IncrblobChannelType = {
   "incrblob",                        /* typeName                             */
-  TCL_CHANNEL_VERSION_2,             /* version                              */
+  TCL_CHANNEL_VERSION_5,             /* version                              */
   incrblobClose,                     /* closeProc                            */
   incrblobInput,                     /* inputProc                            */
   incrblobOutput,                    /* outputProc                           */
@@ -418,7 +443,7 @@ static Tcl_ChannelType IncrblobChannelType = {
   0,                                 /* blockModeProc                        */
   0,                                 /* flushProc                            */
   0,                                 /* handlerProc                          */
-  0,                                 /* wideSeekProc                         */
+  incrblobWideSeek,                  /* wideSeekProc                         */
 };
 
 /*
