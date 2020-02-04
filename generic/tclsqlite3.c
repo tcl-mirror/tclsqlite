@@ -295,6 +295,18 @@ static int SQLITE_TCLAPI incrblobClose(
   return TCL_OK;
 }
 
+static int SQLITE_TCLAPI incrblobClose2(
+  void *instanceData,
+  Tcl_Interp *interp,
+  int flags
+){
+  if( (flags&(TCL_CLOSE_READ|TCL_CLOSE_WRITE))!=0 ){
+    return EINVAL;
+  }
+  return incrblobClose(instanceData, interp);
+}
+
+
 /*
 ** Read data from an incremental blob channel.
 */
@@ -439,11 +451,13 @@ static Tcl_ChannelType IncrblobChannelType = {
   0,                                 /* getOptionProc                        */
   incrblobWatch,                     /* watchProc (this is a no-op)          */
   incrblobHandle,                    /* getHandleProc (always returns error) */
-  0,                                 /* close2Proc                           */
+  incrblobClose2,                    /* close2Proc                           */
   0,                                 /* blockModeProc                        */
   0,                                 /* flushProc                            */
   0,                                 /* handlerProc                          */
   incrblobWideSeek,                  /* wideSeekProc                         */
+  0,
+  0,
 };
 
 /*
