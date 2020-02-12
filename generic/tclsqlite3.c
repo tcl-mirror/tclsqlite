@@ -393,8 +393,9 @@ static Tcl_WideInt SQLITE_TCLAPI incrblobWideSeek(
     case SEEK_END:
       p->iSeek = sqlite3_blob_bytes(p->pBlob) + offset;
       break;
-
-    default: assert(!"Bad seekMode");
+    default:
+   	  *errorCodePtr = EINVAL;
+      return -1;
   }
 
   return p->iSeek;
@@ -418,8 +419,9 @@ static int SQLITE_TCLAPI incrblobSeek(
     case SEEK_END:
       p->iSeek = sqlite3_blob_bytes(p->pBlob) + offset;
       break;
-
-    default: assert(!"Bad seekMode");
+    default:
+   	  *errorCodePtr = EINVAL;
+      return -1;
   }
 
   return p->iSeek;
@@ -430,6 +432,8 @@ static void SQLITE_TCLAPI incrblobWatch(
   void *instanceData,
   int mode
 ){
+  (void)instanceData;
+  (void)mode;
   /* NO-OP */
 }
 static int SQLITE_TCLAPI incrblobHandle(
@@ -437,6 +441,10 @@ static int SQLITE_TCLAPI incrblobHandle(
   int dir,
   void **hPtr
 ){
+  (void)instanceData;
+  (void)dir;
+  (void)hPtr;
+
   return TCL_ERROR;
 }
 
@@ -524,13 +532,15 @@ static int createIncrblobChannel(
 ** or {...} or ; to be seen anywhere.  Most callback scripts consist
 ** of just a single procedure name and they meet this requirement.
 */
-static int safeToUseEvalObjv(Tcl_Interp *interp, Tcl_Obj *pCmd){
+static int safeToUseEvalObjv(Tcl_Interp *dummy, Tcl_Obj *pCmd){
   /* We could try to do something with Tcl_Parse().  But we will instead
   ** just do a search for forbidden characters.  If any of the forbidden
   ** characters appear in pCmd, we will report the string as unsafe.
   */
   const char *z;
   int n;
+  (void)dummy;
+
   z = Tcl_GetStringFromObj(pCmd, &n);
   while( n-- > 0 ){
     int c = *(z++);
@@ -706,6 +716,8 @@ static int DbTraceHandler(
 ){
   SqliteDb *pDb = (SqliteDb*)cd;
   Tcl_DString str;
+  (void)type;
+  (void)pd;
 
   Tcl_DStringInit(&str);
   Tcl_DStringAppend(&str, pDb->zTrace, -1);
@@ -808,6 +820,7 @@ static int DbProfileHandler(
   Tcl_DString str;
   char zTm[100];
   sqlite3_stmt *pStmt = (sqlite3_stmt *)pd;
+  (void)type;
 
   sqlite3_snprintf(sizeof(zTm)-1, zTm, "%lld", (Tcl_WideInt)(size_t)xd);
   Tcl_DStringInit(&str);
@@ -860,6 +873,7 @@ static int DbWalHandler(
   Tcl_Obj *p;
   SqliteDb *pDb = (SqliteDb*)clientData;
   Tcl_Interp *interp = pDb->interp;
+  (void)db;
   assert(pDb->pWalHook);
 
   assert( db==pDb->db );
@@ -976,6 +990,9 @@ static void tclCollateNeeded(
 ){
   SqliteDb *pDb = (SqliteDb *)pCtx;
   Tcl_Obj *pScript = Tcl_DuplicateObj(pDb->pCollateNeeded);
+  (void)db;
+  (void)enc;
+
   Tcl_IncrRefCount(pScript);
   Tcl_ListObjAppendElement(0, pScript, Tcl_NewStringObj(zName, -1));
   Tcl_EvalObjEx(pDb->interp, pScript, 0);
@@ -1131,16 +1148,16 @@ static void tclSqlFunc(sqlite3_context *context, int argc, sqlite3_value**argv){
           sqlite3_result_int64(context, v);
           break;
         }
-        /* fall-through */
       }
+      /* FALLTHRU */
       case SQLITE_FLOAT: {
         double r;
         if( TCL_OK==Tcl_GetDoubleFromObj(0, pVar, &r) ){
           sqlite3_result_double(context, r);
           break;
         }
-        /* fall-through */
       }
+      /* FALLTHRU */
       default: {
         data = (unsigned char *)Tcl_GetStringFromObj(pVar, &n);
         sqlite3_result_text(context, (char *)data, n, SQLITE_TRANSIENT);
@@ -2449,7 +2466,7 @@ static int SQLITE_TCLAPI DbObjCmd(
         { "writable_schema",    SQLITE_DBCONFIG_WRITABLE_SCHEMA       },
     };
     Tcl_Obj *pResult;
-    int ii;
+    size_t ii;
     if( objc>4 ){
       Tcl_WrongNumArgs(interp, 2, objv, "?OPTION? ?BOOLEAN?");
       return TCL_ERROR;
@@ -3810,6 +3827,7 @@ static int SQLITE_TCLAPI DbMain(
   int nKey = 0;
 #endif
   int rc;
+  (void)cd;
 
   /* In normal use, each TCL interpreter runs in a single thread.  So
   ** by default, we can turn off mutexing on SQLite database connections.
@@ -3972,6 +3990,7 @@ typedef struct {
   const struct TclStubs *stubTable;
 } PrivateTclInterp;
 static const char *Tcl_InitStubs(Tcl_Interp *interp, const char *version, int exact) {
+  (void)exact;
   tclStubsPtr = ((PrivateTclInterp *)interp)->stubTable;
   if (tclStubsPtr->magic != TCL_STUB_MAGIC) {
     ((PrivateTclInterp *)interp)->result = (char *)"interpreter uses an incompatible stubs mechanism";
@@ -4023,15 +4042,15 @@ DLLEXPORT int Sqlite3_Init(Tcl_Interp *interp){
   return rc;
 }
 DLLEXPORT int Tclsqlite3_Init(Tcl_Interp *interp){ return Sqlite3_Init(interp); }
-DLLEXPORT int Sqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
-DLLEXPORT int Tclsqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
+DLLEXPORT int Sqlite3_Unload(Tcl_Interp *interp, int flags){ (void)interp;(void)flags;return TCL_OK; }
+DLLEXPORT int Tclsqlite3_Unload(Tcl_Interp *interp, int flags){ (void)interp;(void)flags;return TCL_OK; }
 
 /* Because it accesses the file-system and uses persistent state, SQLite
 ** is not considered appropriate for safe interpreters.  Hence, we cause
 ** the _SafeInit() interfaces return TCL_ERROR.
 */
-DLLEXPORT int Sqlite3_SafeInit(Tcl_Interp *interp){ return TCL_ERROR; }
-DLLEXPORT int Sqlite3_SafeUnload(Tcl_Interp *interp, int flags){return TCL_ERROR;}
+DLLEXPORT int Sqlite3_SafeInit(Tcl_Interp *interp){ (void)interp;return TCL_ERROR; }
+DLLEXPORT int Sqlite3_SafeUnload(Tcl_Interp *interp, int flags){(void)interp;(void)flags;return TCL_ERROR;}
 
 
 
