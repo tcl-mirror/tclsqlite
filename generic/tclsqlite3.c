@@ -300,10 +300,10 @@ static int SQLITE_TCLAPI incrblobClose2(
   Tcl_Interp *interp,
   int flags
 ){
-  if( (flags&(TCL_CLOSE_READ|TCL_CLOSE_WRITE))!=0 ){
-    return EINVAL;
+  if( (flags&(TCL_CLOSE_READ|TCL_CLOSE_WRITE))==0 ){
+    return incrblobClose(instanceData, interp);
   }
-  return incrblobClose(instanceData, interp);
+  return EINVAL;
 }
 
 
