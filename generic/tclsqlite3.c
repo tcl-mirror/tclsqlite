@@ -3202,22 +3202,10 @@ deserialize_error:
   ** Change the encryption key on the currently open database.
   */
   case DB_REKEY: {
-#if defined(SQLITE_HAS_CODEC) && !defined(SQLITE_OMIT_CODEC_FROM_TCL)
-    int nKey;
-    void *pKey;
-#endif
     if( objc!=3 ){
       Tcl_WrongNumArgs(interp, 2, objv, "KEY");
       return TCL_ERROR;
     }
-#if defined(SQLITE_HAS_CODEC) && !defined(SQLITE_OMIT_CODEC_FROM_TCL)
-    pKey = Tcl_GetByteArrayFromObj(objv[2], &nKey);
-    rc = sqlite3_rekey(pDb->db, pKey, nKey);
-    if( rc ){
-      Tcl_AppendResult(interp, sqlite3_errstr(rc), (char*)0);
-      rc = TCL_ERROR;
-    }
-#endif
     break;
   }
 
@@ -3785,9 +3773,6 @@ static int sqliteCmdUsage(
     "HANDLE ?FILENAME? ?-vfs VFSNAME? ?-readonly BOOLEAN? ?-create BOOLEAN?"
     " ?-nofollow BOOLEAN?"
     " ?-nomutex BOOLEAN? ?-fullmutex BOOLEAN? ?-uri BOOLEAN?"
-#if defined(SQLITE_HAS_CODEC) && !defined(SQLITE_OMIT_CODEC_FROM_TCL)
-    " ?-key CODECKEY?"
-#endif
   );
   return TCL_ERROR;
 }
@@ -3821,11 +3806,8 @@ static int SQLITE_TCLAPI DbMain(
   const char *zFile = 0;
   const char *zVfs = 0;
   int flags;
+  int bTranslateFileName = 1;
   Tcl_DString translatedFilename;
-#if defined(SQLITE_HAS_CODEC) && !defined(SQLITE_OMIT_CODEC_FROM_TCL)
-  void *pKey = 0;
-  int nKey = 0;
-#endif
   int rc;
   (void)cd;
 
@@ -3853,11 +3835,7 @@ static int SQLITE_TCLAPI DbMain(
       return TCL_OK;
     }
     if( strcmp(zArg,"-has-codec")==0 ){
-#if defined(SQLITE_HAS_CODEC) && !defined(SQLITE_OMIT_CODEC_FROM_TCL)
-      Tcl_AppendResult(interp,"1",(char*)0);
-#else
       Tcl_AppendResult(interp,"0",(char*)0);
-#endif
       return TCL_OK;
     }
     if( zArg[0]=='-' ) return sqliteCmdUsage(interp, objv);
@@ -3872,9 +3850,7 @@ static int SQLITE_TCLAPI DbMain(
     if( i==objc-1 ) return sqliteCmdUsage(interp, objv);
     i++;
     if( strcmp(zArg,"-key")==0 ){
-#if defined(SQLITE_HAS_CODEC) && !defined(SQLITE_OMIT_CODEC_FROM_TCL)
-      pKey = Tcl_GetByteArrayFromObj(objv[i], &nKey);
-#endif
+      /* no-op */
     }else if( strcmp(zArg, "-vfs")==0 ){
       zVfs = Tcl_GetString(objv[i]);
     }else if( strcmp(zArg, "-readonly")==0 ){
@@ -3929,6 +3905,10 @@ static int SQLITE_TCLAPI DbMain(
       }else{
         flags &= ~SQLITE_OPEN_URI;
       }
+    }else if( strcmp(zArg, "-translatefilename")==0 ){
+      if( Tcl_GetBooleanFromObj(interp, objv[i], &bTranslateFileName) ){
+        return TCL_ERROR;
+      }
     }else{
       Tcl_AppendResult(interp, "unknown option: ", zArg, (char*)0);
       return TCL_ERROR;
@@ -3938,9 +3918,13 @@ static int SQLITE_TCLAPI DbMain(
   p = (SqliteDb*)Tcl_Alloc( sizeof(*p) );
   memset(p, 0, sizeof(*p));
   if( zFile==0 ) zFile = "";
-  zFile = Tcl_TranslateFileName(interp, zFile, &translatedFilename);
+  if( bTranslateFileName ){
+    zFile = Tcl_TranslateFileName(interp, zFile, &translatedFilename);
+  }
   rc = sqlite3_open_v2(zFile, &p->db, flags, zVfs);
-  Tcl_DStringFree(&translatedFilename);
+  if( bTranslateFileName ){
+    Tcl_DStringFree(&translatedFilename);
+  }
   if( p->db ){
     if( SQLITE_OK!=sqlite3_errcode(p->db) ){
       zErrMsg = sqlite3_mprintf("%s", sqlite3_errmsg(p->db));
@@ -3950,11 +3934,6 @@ static int SQLITE_TCLAPI DbMain(
   }else{
     zErrMsg = sqlite3_mprintf("%s", sqlite3_errstr(rc));
   }
-#if defined(SQLITE_HAS_CODEC) && !defined(SQLITE_OMIT_CODEC_FROM_TCL)
-  if( p->db ){
-    sqlite3_key(p->db, pKey, nKey);
-  }
-#endif
   if( p->db==0 ){
     Tcl_AppendResult(interp, zErrMsg, (char*)0);
     Tcl_Free((char*)p);
