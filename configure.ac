@@ -19,7 +19,7 @@ dnl	to configure the system for the local environment.
 # so you can encode the package version directly into the source files.
 #-----------------------------------------------------------------------
 
-AC_INIT([sqlite], [3.34.0])
+AC_INIT([sqlite],[3.34.0])
 
 #--------------------------------------------------------------------
 # Call TEA_INIT as the first TEA_ macro to set up initial vars.
@@ -107,7 +107,7 @@ TEA_ADD_TCL_SOURCES([])
 # Patchs from rmax.
 #--------------------------------------------------------------------
 AC_ARG_WITH([system-sqlite],
- [AC_HELP_STRING([--with-system-sqlite],
+ [AS_HELP_STRING([--with-system-sqlite],
    [use a system-supplied libsqlite3 instead of the bundled one])],
  [], [with_system_sqlite=no])
 if test x$with_system_sqlite != xno; then
@@ -217,4 +217,5 @@ TEA_PROG_TCLSH
 # which require substituting th AC variables in.  Include these here.
 #--------------------------------------------------------------------
 
-AC_OUTPUT([Makefile pkgIndex.tcl])
+AC_CONFIG_FILES([Makefile pkgIndex.tcl])
+AC_OUTPUT
