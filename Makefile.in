@@ -75,10 +75,11 @@ exec_prefix	= @exec_prefix@
 
 bindir		= @bindir@
 libdir		= @libdir@
+includedir	= @includedir@
 datarootdir	= @datarootdir@
+runstatedir	= @runstatedir@
 datadir		= @datadir@
 mandir		= @mandir@
-includedir	= @includedir@
 
 DESTDIR		=
 
