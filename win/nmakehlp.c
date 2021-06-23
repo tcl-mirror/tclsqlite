@@ -4,8 +4,8 @@
  *
  *	This is used to fix limitations within nmake and the environment.
  *
- * Copyright (c) 2002 by David Gravereaux.
- * Copyright (c) 2006 by Pat Thoyts
+ * Copyright (c) 2002 David Gravereaux.
+ * Copyright (c) 2006 Pat Thoyts
  *
  * See the file "license.terms" for information on usage and redistribution of
  * this file, and for a DISCLAIMER OF ALL WARRANTIES.
@@ -537,7 +537,7 @@ GetVersionFromFile(
 		    ++q;
 		}
 
-		memcpy(szBuffer, p, q - p);
+		memmove(szBuffer, p, q - p);
 		szBuffer[q-p] = 0;
 		szResult = szBuffer;
 		break;
@@ -674,7 +674,7 @@ SubstituteFile(
 		    memcpy(szBuffer, szCopy, sizeof(szCopy));
 		}
 	    }
-	    printf(szBuffer);
+	    printf("%s", szBuffer);
 	}
 
 	list_free(&substPtr);
@@ -708,7 +708,7 @@ QualifyPath(
 {
     char szCwd[MAX_PATH + 1];
 
-	GetFullPathName(szPath, sizeof(szCwd)-1, szCwd, NULL);
+    GetFullPathName(szPath, sizeof(szCwd)-1, szCwd, NULL);
     printf("%s\n", szCwd);
     return 0;
 }
